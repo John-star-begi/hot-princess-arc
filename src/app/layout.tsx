@@ -1,19 +1,15 @@
-import '@/styles/globals.css';
-import '@/styles/theme.css';
-import { ReactQueryProvider } from '@/lib/react-query';
-import { ToasterClient } from '@/components/ui/ToasterClient';
+import '../styles/globals.css';
 
-export const metadata = { title: 'Hot Princess Arc' };
+export const metadata = {
+  title: 'Hot Princess Arc',
+  description: 'Private cycle wellness app',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-dvh bg-princess-cream">
-        <ReactQueryProvider>
-          <div className="mx-auto max-w-md p-4">{children}</div>
-          <ToasterClient />
-        </ReactQueryProvider>
-      </body>
+      <head />
+      <body>{children}</body>
     </html>
   );
 }
