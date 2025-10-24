@@ -1,4 +1,5 @@
 import '../styles/globals.css';
+import { AuthProvider } from '@/components/AuthProvider';
 
 export const metadata = {
   title: 'Hot Princess Arc',
@@ -9,7 +10,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head />
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
