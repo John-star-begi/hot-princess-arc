@@ -1,16 +1,18 @@
 'use client';
-
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function SettingsPage() {
-  const [startDate, setStartDate] = useState('');
-  const [cycleLength, setCycleLength] = useState<number | ''>('');
+  const [form, setForm] = useState({
+    start_date: '',
+    cycle_length: '',
+    notify: true,
+    theme: 'princess',
+  });
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadSettings = async () => {
+    (async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -19,75 +21,99 @@ export default function SettingsPage() {
         return;
       }
 
-      const { data } = await supabase
+      const { data: existing } = await supabase
         .from('settings')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (data) {
-        setStartDate(data.start_date);
-        setCycleLength(data.cycle_length);
+      if (existing) {
+        setForm({
+          start_date: existing.start_date ?? '',
+          cycle_length: existing.cycle_length ?? '',
+          notify: existing.notify ?? true,
+          theme: existing.theme ?? 'princess',
+        });
       }
-      setLoading(false);
-    };
-
-    loadSettings();
+    })();
   }, []);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage('Saving...');
+  async function saveSettings() {
+    setMessage('');
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+
+    if (!user) {
+      setMessage('Not logged in');
+      return;
+    }
 
     const { error } = await supabase.from('settings').upsert({
-      user_id: user.id,
-      start_date: startDate,
-      cycle_length: cycleLength,
+      user_id: user.id, // ✅ critical line
+      start_date: form.start_date,
+      cycle_length: parseInt(form.cycle_length || '0', 10),
+      notify: form.notify,
+      theme: form.theme,
+      updated_at: new Date().toISOString(),
     });
 
-    if (error) setMessage('Error saving settings');
-    else setMessage('Settings saved successfully 💖');
+    if (error) {
+      console.error(error);
+      setMessage('Error saving settings ❌');
+    } else {
+      setMessage('Settings saved successfully 💖');
+    }
   }
 
-  if (loading) return <p>Loading...</p>;
-
   return (
-    <form onSubmit={onSubmit} className="grid gap-4 max-w-sm mx-auto p-4">
-      <h1 className="text-xl font-semibold">Your Cycle Settings</h1>
+    <div className="max-w-md mx-auto p-4 grid gap-3">
+      <h1 className="text-xl font-semibold mb-2">Settings</h1>
 
-      <label>
-        <span>Cycle Start Date</span>
+      <label>Cycle start date</label>
+      <input
+        type="date"
+        className="border p-2 rounded"
+        value={form.start_date}
+        onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+      />
+
+      <label>Cycle length (days)</label>
+      <input
+        type="number"
+        min={21}
+        max={40}
+        className="border p-2 rounded"
+        value={form.cycle_length}
+        onChange={(e) => setForm({ ...form, cycle_length: e.target.value })}
+      />
+
+      <label className="flex items-center gap-2">
         <input
-          type="date"
-          className="border p-2 rounded w-full"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
+          type="checkbox"
+          checked={form.notify}
+          onChange={(e) => setForm({ ...form, notify: e.target.checked })}
         />
+        Enable notifications
       </label>
 
-      <label>
-        <span>Cycle Length (days)</span>
-        <input
-          type="number"
-          className="border p-2 rounded w-full"
-          value={cycleLength}
-          onChange={(e) => setCycleLength(Number(e.target.value))}
-        />
-      </label>
+      <label>Theme</label>
+      <select
+        className="border p-2 rounded"
+        value={form.theme}
+        onChange={(e) => setForm({ ...form, theme: e.target.value })}
+      >
+        <option value="princess">Princess (default)</option>
+        <option value="lavender">Lavender</option>
+        <option value="rose">Rose</option>
+      </select>
 
-      <button className="bg-princess-peach px-3 py-2 rounded">
+      <button onClick={saveSettings} className="bg-princess-peach text-white px-3 py-2 rounded">
         Save Settings
       </button>
 
-      {message && <p>{message}</p>}
-
-      <a className="underline text-sm" href="/dashboard">
-        ← Back to Dashboard
-      </a>
-    </form>
+      {message && <p className="mt-2">{message}</p>}
+    </div>
   );
 }
