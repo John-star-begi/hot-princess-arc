@@ -1,10 +1,78 @@
+/* Global Styles for Hot Princess Arc */
+
 html, body {
   margin: 0;
   padding: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background-color: #fffaf7;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(180deg, #FFF6E5 0%, #FFECEF 100%);
   color: #2c1f1f;
   text-align: center;
+  min-height: 100vh;
 }
 
-* { box-sizing: border-box; }
+/* Ensure all elements respect the box model */
+* {
+  box-sizing: border-box;
+}
+
+/* Inputs and buttons have a soft pastel style */
+input,
+textarea,
+button {
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  border: 1px solid #f3d4c6;
+}
+
+/* Focus glow for better accessibility */
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #F9C6B0;
+  box-shadow: 0 0 0 2px rgba(249, 198, 176, 0.4);
+}
+
+/* Buttons: pastel pink with hover lift */
+button {
+  background-color: #F9C6B0;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+button:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+/* Anchor links: soft rose with hover underline */
+a {
+  color: #c2649a;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Card-like sections used in dashboard, charts, settings */
+div.p-4.rounded.border {
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(6px);
+  border-color: #ffe3da;
+}
+
+/* Subtle scrollbars for aesthetic touch */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #f3c7b8;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f9bda9;
+}
