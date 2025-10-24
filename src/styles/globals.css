@@ -1,5 +1,6 @@
-/* Global Styles for Hot Princess Arc */
+/* Global Styles for Hot Princess Arc – Mobile Optimized */
 
+/* Base setup */
 html, body {
   margin: 0;
   padding: 0;
@@ -8,36 +9,51 @@ html, body {
   color: #2c1f1f;
   text-align: center;
   min-height: 100vh;
+  overflow-x: hidden; /* ✅ Prevent horizontal scroll */
 }
 
-/* Ensure all elements respect the box model */
+/* Make sure all boxes respect layout bounds */
 * {
   box-sizing: border-box;
+  max-width: 100%;
 }
 
-/* Inputs and buttons have a soft pastel style */
+/* Center and limit main content width on large screens */
+main {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
+  width: 100%;
+}
+
+/* Input and button styling */
 input,
 textarea,
-button {
+button,
+select {
   transition: all 0.2s ease;
   border-radius: 6px;
   border: 1px solid #f3d4c6;
+  font-size: 1rem;
+  width: 100%; /* ✅ Stretch inputs to screen width */
 }
 
-/* Focus glow for better accessibility */
+/* Focus glow for accessibility */
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   outline: none;
   border-color: #F9C6B0;
   box-shadow: 0 0 0 2px rgba(249, 198, 176, 0.4);
 }
 
-/* Buttons: pastel pink with hover lift */
+/* Buttons: soft pastel hover lift */
 button {
   background-color: #F9C6B0;
   color: #fff;
   cursor: pointer;
   font-weight: 500;
+  padding: 0.6rem 1rem;
 }
 
 button:hover {
@@ -45,7 +61,7 @@ button:hover {
   transform: translateY(-1px);
 }
 
-/* Anchor links: soft rose with hover underline */
+/* Anchor links: soft rose */
 a {
   color: #c2649a;
   text-decoration: none;
@@ -55,14 +71,40 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Card-like sections used in dashboard, charts, settings */
+/* Cards: dashboard, charts, settings */
 div.p-4.rounded.border {
   background-color: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(6px);
   border-color: #ffe3da;
+  border-radius: 10px;
 }
 
-/* Subtle scrollbars for aesthetic touch */
+/* Responsive text size for smaller screens */
+h1, h2, h3, p, label {
+  word-wrap: break-word;
+  line-height: 1.4;
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.4rem;
+  }
+  h2 {
+    font-size: 1.2rem;
+  }
+  p, label {
+    font-size: 1rem;
+  }
+  button {
+    font-size: 1rem;
+  }
+}
+
+/* Smooth scroll and subtle scrollbars */
+html {
+  scroll-behavior: smooth;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
