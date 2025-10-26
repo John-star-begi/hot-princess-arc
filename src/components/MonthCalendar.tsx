@@ -44,7 +44,7 @@ export default function MonthCalendar({
       <div className="flex justify-between items-center">
         <button
           onClick={() => changeMonth(-1)}
-          className="px-2 text-lg text-princess-peach"
+          className="px-3 text-lg text-princess-peach"
         >
           ←
         </button>
@@ -53,7 +53,7 @@ export default function MonthCalendar({
         </h3>
         <button
           onClick={() => changeMonth(1)}
-          className="px-2 text-lg text-princess-peach"
+          className="px-3 text-lg text-princess-peach"
         >
           →
         </button>
@@ -80,14 +80,17 @@ export default function MonthCalendar({
             <a
               key={i}
               href={`/journal/${d.toISOString().slice(0, 10)}`}
-              className="rounded aspect-square flex items-center justify-center text-sm"
+              className="relative rounded aspect-square flex items-center justify-center text-sm bg-white"
               style={{
-                background: color,
-                outline: isToday ? '2px solid black' : '1px solid #e3e3e3',
+                outline: isToday ? '2px solid #ffb6c1' : '1px solid #eee',
                 ...marginStyle,
               }}
             >
               {d.getDate()}
+              <span
+                className="absolute bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full opacity-80"
+                style={{ backgroundColor: color }}
+              />
             </a>
           );
         })}
