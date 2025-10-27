@@ -386,7 +386,10 @@ export function Charts() {
                   <div
                     key={p.phase}
                     className="rounded-lg p-3 border"
-                    style={{ background: `${phasePalette[p.phase]}20`, borderColor: `${phasePalette[p.phase]}55` }}
+                   style={{
+  background: `${(phasePalette as Record<string, string>)[p.phase] || '#eee'}20`,
+  borderColor: `${(phasePalette as Record<string, string>)[p.phase] || '#eee'}55`,
+}}
                   >
                     <div className="font-medium capitalize mb-1">{p.phase}</div>
                     <div className="text-sm grid grid-cols-2 gap-y-1">
@@ -452,4 +455,5 @@ export function Charts() {
     </div>
   );
 }
+
 
