@@ -7,7 +7,7 @@ import { MoreHorizontal } from "lucide-react";
 export default function NavigatorDrawer() {
   const [open, setOpen] = useState(false);
 
-  const links = [
+  const links: { name: string; href: string }[] = [
     { name: "Today", href: "/dashboard" },
     { name: "Phase Overview", href: "/phase/menstrual" },
     { name: "Nutrition", href: "/phase/menstrual#nutrition" },
@@ -61,7 +61,7 @@ export default function NavigatorDrawer() {
                 {links.map((item) => (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={item.href as unknown as URL} // 👈 fix: safely cast to URL-like type
                     onClick={() => setOpen(false)}
                     className="block py-2 px-3 rounded-lg text-gray-700 hover:bg-pink-100"
                   >
