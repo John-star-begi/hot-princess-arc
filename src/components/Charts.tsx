@@ -359,7 +359,7 @@ export function Charts() {
                         x2={b.end}
                         y1={0}
                         y2={10}
-                        fill={phasePalette[b.phase] || '#eee'}
+                        fill={(phasePalette as Record<string, string>)[b.phase] || '#eee'}
                         fillOpacity={0.12}
                         ifOverflow="extendDomain"
                       />
@@ -452,3 +452,4 @@ export function Charts() {
     </div>
   );
 }
+
