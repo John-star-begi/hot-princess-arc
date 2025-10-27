@@ -5,12 +5,17 @@ import { TodayBanner } from '@/components/TodayBanner';
 import { Charts } from '@/components/Charts';
 import MonthCalendar from '@/components/MonthCalendar';
 import YearCalendar from '@/components/YearCalendar';
+import PhaseModal from '@/components/PhaseModal';
+import { cycleDay, phaseForDay } from '@/lib/phase';
+import type { PhaseKey } from '@/lib/phaseGuides';
 
 export default function Dashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [settings, setSettings] = useState<{ start_date: string; cycle_length: number } | null>(null);
   const [view, setView] = useState<'month' | 'year'>('month');
+  const [phaseOpen, setPhaseOpen] = useState(false);
 
+  // Load user + settings
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -32,7 +37,14 @@ export default function Dashboard() {
   }, []);
 
   if (!userId) return null;
+
   const todayStr = new Date().toISOString().slice(0, 10);
+  const todayPhase: PhaseKey | 'unknown' = settings
+    ? (phaseForDay(
+        cycleDay(new Date(), new Date(settings.start_date), settings.cycle_length),
+        settings.cycle_length
+      ) as PhaseKey)
+    : 'unknown';
 
   return (
     <div className="flex flex-col items-center w-full min-h-screen bg-pink-50 pb-16 px-4 gap-6">
@@ -40,6 +52,24 @@ export default function Dashboard() {
       <div className="w-full max-w-md">
         <TodayBanner settings={settings} />
       </div>
+
+      {/* 🌸 Phase Hub button */}
+      {settings && todayPhase !== 'unknown' && (
+        <>
+          <button
+            onClick={() => setPhaseOpen(true)}
+            className="bg-white border border-pink-200 px-4 py-2 rounded-lg shadow-sm text-pink-600 hover:bg-pink-100 transition font-medium"
+          >
+            🌸 View {todayPhase.charAt(0).toUpperCase() + todayPhase.slice(1)} Guide
+          </button>
+
+          <PhaseModal
+            open={phaseOpen}
+            onClose={() => setPhaseOpen(false)}
+            phase={todayPhase}
+          />
+        </>
+      )}
 
       {/* Journal Button */}
       <a
