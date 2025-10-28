@@ -1,8 +1,7 @@
 // src/lib/data/phasePlans.ts
 
-import { createClient } from '@/lib/supabaseClient'
+import { createServerSupabase } from '@/lib/supabaseServer'
 
-// ✅ TYPES
 export type PhaseSlug = 'menstrual' | 'follicular' | 'ovulation' | 'luteal'
 
 export interface Macros {
@@ -21,9 +20,9 @@ export interface TodayPlan {
   supplements: string[]
 }
 
-// ✅ 1. Determine the user’s current phase
+// ✅ 1. Get user’s current phase
 export async function getUserCurrentPhase(userId: string): Promise<PhaseSlug | null> {
-  const supabase = createClient()
+  const supabase = createServerSupabase()
 
   const { data: settings, error } = await supabase
     .from('settings')
@@ -39,16 +38,15 @@ export async function getUserCurrentPhase(userId: string): Promise<PhaseSlug | n
   const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
   const dayInCycle = ((diffDays % cycle_length) + cycle_length) % cycle_length
 
-  // Phase logic (already configured to your needs)
   if (dayInCycle < 5) return 'menstrual'
   if (dayInCycle < 13) return 'follicular'
   if (dayInCycle < 16) return 'ovulation'
   return 'luteal'
 }
 
-// ✅ 2. Fetch today’s plan based on user phase
+// ✅ 2. Fetch today’s plan
 export async function getTodayPlan(userId: string): Promise<TodayPlan | null> {
-  const supabase = createClient()
+  const supabase = createServerSupabase()
   const phase = await getUserCurrentPhase(userId)
   if (!phase) return null
 
@@ -95,9 +93,9 @@ export async function getTodayPlan(userId: string): Promise<TodayPlan | null> {
   }
 }
 
-// ✅ 3. Fetch a full guide for a specific phase
+// ✅ 3. Fetch a guide for any phase
 export async function getPhaseGuide(phaseSlug: PhaseSlug): Promise<TodayPlan | null> {
-  const supabase = createClient()
+  const supabase = createServerSupabase()
 
   const { data: phaseData } = await supabase
     .from('phase_plans')
