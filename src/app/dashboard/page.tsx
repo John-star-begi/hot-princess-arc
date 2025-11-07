@@ -1,135 +1,94 @@
-'use client'
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
-import { TodayBanner } from '@/components/TodayBanner'
-import { Charts } from '@/components/Charts'
-import MonthCalendar from '@/components/MonthCalendar'
-import YearCalendar from '@/components/YearCalendar'
-import TodayModal from '@/components/TodayModal'
-import PhaseGuideModal from '@/components/PhaseGuideModal'
-import { cycleDay, phaseForDay } from '@/lib/phase'
+"use client";
 
-type PhaseKey = 'menstrual' | 'follicular' | 'ovulation' | 'luteal'
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { TodayBanner } from "@/components/TodayBanner";
+import MonthCalendar from "@/components/MonthCalendar";
+import TodayModal from "@/components/TodayModal";
+import PhaseGuideModal from "@/components/PhaseGuideModal";
+import { Charts } from "@/components/Charts";
+import { cycleDay, phaseForDay } from "@/lib/phase";
+
+type PhaseKey = "menstrual" | "follicular" | "ovulation" | "luteal";
 
 export default function Dashboard() {
-  const [userId, setUserId] = useState<string | null>(null)
-  const [settings, setSettings] = useState<{ start_date: string; cycle_length: number } | null>(null)
-  const [view, setView] = useState<'month' | 'year'>('month')
-  const [phaseOpen, setPhaseOpen] = useState(false)
-  const [todayOpen, setTodayOpen] = useState(false)
-  const [todayPhase, setTodayPhase] = useState<PhaseKey | 'unknown'>('unknown')
+  const [userId, setUserId] = useState<string | null>(null);
+  const [settings, setSettings] = useState<{ start_date: string; cycle_length: number } | null>(null);
+  const [todayOpen, setTodayOpen] = useState(false);
+  const [phaseOpen, setPhaseOpen] = useState(false);
+  const [todayPhase, setTodayPhase] = useState<PhaseKey | "unknown">("unknown");
 
-  // Load user + settings
   useEffect(() => {
-    ;(async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      const uid = user?.id ?? null
-      setUserId(uid)
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const uid = user?.id ?? null;
+      setUserId(uid);
       if (!uid) {
-        window.location.href = '/login'
-        return
+        window.location.href = "/login";
+        return;
       }
 
-      const { data: s } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('user_id', uid)
-        .maybeSingle()
+      const { data } = await supabase
+        .from("settings")
+        .select("start_date, cycle_length")
+        .eq("user_id", uid)
+        .maybeSingle();
 
-      if (s) {
-        setSettings({ start_date: s.start_date, cycle_length: s.cycle_length })
-        const currentPhase = phaseForDay(
-          cycleDay(new Date(), new Date(s.start_date), s.cycle_length),
-          s.cycle_length
-        ) as PhaseKey
-        setTodayPhase(currentPhase)
+      if (data?.start_date && data?.cycle_length) {
+        setSettings({ start_date: data.start_date, cycle_length: Number(data.cycle_length) });
+
+        // compute todays phase for banner buttons
+        const start = new Date(`${data.start_date}T00:00:00`);
+        const d = cycleDay(new Date(), start, Number(data.cycle_length));
+        const p = phaseForDay(d) as PhaseKey;
+        setTodayPhase(p);
       }
-    })()
-  }, [])
-
-  if (!userId) return null
-
-  const todayStr = new Date().toISOString().slice(0, 10)
+    })();
+  }, []);
 
   return (
-    <div className="flex flex-col items-center w-full min-h-screen bg-pink-50 pb-16 px-4 gap-6">
-      {/* 🌸 Today’s Phase Banner */}
-      <div className="w-full max-w-md">
+    <div className="px-3 pb-8 space-y-4">
+      {/* Soft, phase aware banner */}
+      <section className="pt-3">
         <TodayBanner settings={settings} />
-      </div>
-
-      {/* 🌕 Today Modal Button */}
-      <button
-        onClick={() => setTodayOpen(true)}
-        className="bg-white border border-pink-200 px-4 py-2 rounded-lg shadow-sm text-pink-600 hover:bg-pink-100 transition font-medium"
-      >
-        🍑 View Today’s Plan
-      </button>
-      {todayOpen && <TodayModal onClose={() => setTodayOpen(false)} />}
-
-      {/* 🌸 Phase Hub Button */}
-      {settings && todayPhase !== 'unknown' && (
-        <>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <button
+            onClick={() => setTodayOpen(true)}
+            className="rounded-2xl bg-white/80 border border-pink-200 py-3 text-sm shadow-sm active:scale-[.99]"
+          >
+            🍑 View Today’s Plan
+          </button>
           <button
             onClick={() => setPhaseOpen(true)}
-            className="bg-white border border-pink-200 px-4 py-2 rounded-lg shadow-sm text-pink-600 hover:bg-pink-100 transition font-medium"
+            className="rounded-2xl bg-white/80 border border-pink-200 py-3 text-sm shadow-sm active:scale-[.99]"
           >
-            🌸 View {todayPhase.charAt(0).toUpperCase() + todayPhase.slice(1)} Guide
+            🌸 Phase Guide
           </button>
-
-          {phaseOpen && (
-            <PhaseGuideModal
-              phase={todayPhase}
-              onClose={() => setPhaseOpen(false)}
-            />
-          )}
-        </>
-      )}
-
-      {/* ✍️ Journal Button */}
-      <a
-        href={`/journal/${todayStr}`}
-        className="bg-princess-peach text-white px-6 py-2 rounded-lg font-medium shadow-sm hover:bg-pink-400 transition"
-      >
-        ✍️ Log today’s journal
-      </a>
-
-      {/* 📊 Charts */}
-      <div className="w-full max-w-lg">
-        <Charts />
-      </div>
-
-      {/* ⚙️ Cycle Settings Check */}
-      {!settings ? (
-        <a href="/settings" className="underline text-pink-500 text-sm">
-          Add your cycle settings →
-        </a>
-      ) : (
-        <div className="w-full flex flex-col items-center">
-          {/* 🗓 Month or Year Calendar */}
-          <div className={view === 'month' ? 'w-full max-w-sm' : 'w-full max-w-5xl'}>
-            {view === 'month' ? (
-              <MonthCalendar
-                startDate={settings.start_date}
-                cycleLength={settings.cycle_length}
-              />
-            ) : (
-              <YearCalendar
-                startDate={settings.start_date}
-                cycleLength={settings.cycle_length}
-              />
-            )}
-          </div>
-
-          {/* 🔁 Toggle Button */}
-          <button
-            onClick={() => setView(view === 'month' ? 'year' : 'month')}
-            className="mt-4 text-pink-500 underline text-sm hover:text-pink-600"
+          <a
+            href="/journal"
+            className="rounded-2xl bg-gradient-to-r from-princess-rose to-princess-peach py-3 text-sm text-gray-800 text-center shadow-sm active:scale-[.99]"
           >
-            {view === 'month' ? '📅 View full year' : '← Back to month'}
-          </button>
+            ✍️ Log Journal
+          </a>
         </div>
-      )}
+      </section>
+
+      {/* Calendar */}
+      {settings ? (
+        <section className="rounded-3xl bg-white/70 border border-pink-200 shadow-sm p-3">
+          <h3 className="text-base font-medium mb-1">Your month</h3>
+          <MonthCalendar startDate={settings.start_date} cycleLength={settings.cycle_length} />
+        </section>
+      ) : null}
+
+      {/* Charts */}
+      <section className="rounded-3xl bg-white/70 border border-pink-200 shadow-sm p-3">
+        <h3 className="text-base font-medium mb-1">Your flow insights</h3>
+        <Charts />
+      </section>
+
+      {todayOpen && <TodayModal onClose={() => setTodayOpen(false)} />}
+      {phaseOpen && <PhaseGuideModal phase={todayPhase} onClose={() => setPhaseOpen(false)} />}
     </div>
-  )
+  );
 }
