@@ -1,11 +1,11 @@
-"use server";
-
+// src/app/nutrition/page.tsx
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import Link from "next/link";
 
-export default function NutritionPage() {
+// ✅ this runs only on the server — no "use server" line needed
+export default async function NutritionPage() {
   const dir = path.join(process.cwd(), "src/content/nutrition");
   const files = fs.readdirSync(dir).filter((f) => f.endsWith(".md"));
   const articles = files.map((filename) => {
@@ -20,6 +20,7 @@ export default function NutritionPage() {
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <h1 className="text-3xl font-semibold text-rose-700 mb-8">Nutrition</h1>
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {articles.map((a) => (
           <Link
@@ -48,4 +49,3 @@ export default function NutritionPage() {
     </div>
   );
 }
-
