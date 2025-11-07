@@ -1,28 +1,28 @@
-'use client';
-
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
-import { MoreHorizontal } from 'lucide-react';
-import type { Route } from 'next';
+"use client";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import { MoreHorizontal } from "lucide-react";
 
 export default function NavigatorDrawer() {
   const [open, setOpen] = useState(false);
 
-  // We cast hrefs as Route<string> to satisfy Next.js strict types
-  const links: { name: string; href: Route<string> }[] = [
-    { name: 'Today', href: '/dashboard' as Route<string> },
-    { name: 'Journal', href: '/journal' as Route<string> },
-    { name: 'Settings', href: '/settings' as Route<string> },
+  const links: { name: string; href: string }[] = [
+    { name: "Today", href: "/dashboard" },
+    { name: "Phase Overview", href: "/phase/menstrual" },
+    { name: "Nutrition", href: "/phase/menstrual#nutrition" },
+    { name: "Movement", href: "/phase/menstrual#movement" },
+    { name: "Mindset", href: "/phase/menstrual#mindset" },
+    { name: "Journal", href: "/journal" },
+    { name: "Settings", href: "/settings" },
   ];
 
   return (
     <>
-      {/* Drawer button */}
+      {/* Top-left three-dot button */}
       <button
         onClick={() => setOpen(true)}
-        className="p-2 text-gray-700 rounded-full hover:bg-pink-100 active:scale-[.98]"
-        aria-label="Open menu"
+        className="p-2 text-gray-700 rounded-full hover:bg-pink-100"
       >
         <MoreHorizontal size={22} />
       </button>
@@ -30,47 +30,46 @@ export default function NavigatorDrawer() {
       <AnimatePresence>
         {open && (
           <>
-            {/* Background blur */}
+            {/* Backdrop */}
             <motion.div
-              className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40"
+              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setOpen(false)}
             />
 
-            {/* Drawer panel */}
-            <motion.aside
-              className="fixed left-0 top-0 bottom-0 w-[84%] max-w-[360px] bg-white rounded-r-3xl border-r border-pink-200 shadow-xl z-50 p-5"
-              initial={{ x: -24, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -24, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 240, damping: 26 }}
+            {/* Drawer */}
+            <motion.div
+              className="fixed top-0 left-0 w-64 h-full bg-pink-50 shadow-2xl z-50 p-6 flex flex-col"
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ type: "spring", stiffness: 280, damping: 25 }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-[#4b2f2f]">Menu</h2>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="font-semibold text-lg text-gray-800">Navigator</h2>
                 <button
-                  className="text-gray-500 text-2xl -mr-1"
                   onClick={() => setOpen(false)}
-                  aria-label="Close menu"
+                  className="text-gray-500 hover:text-gray-800"
                 >
-                  ×
+                  ✕
                 </button>
               </div>
 
-              <nav className="grid gap-3">
-                {links.map((l) => (
+              <nav className="space-y-3">
+                {links.map((item) => (
                   <Link
-                    key={l.href}
-                    href={l.href}
-                    className="rounded-2xl px-4 py-3 bg-pink-50 border border-pink-200 hover:bg-pink-100 active:scale-[.99] text-center font-medium text-gray-700"
+                    key={item.href}
+                    href={item.href as unknown as URL} // 👈 fix: safely cast to URL-like type
                     onClick={() => setOpen(false)}
+                    className="block py-2 px-3 rounded-lg text-gray-700 hover:bg-pink-100"
                   >
-                    {l.name}
+                    {item.name}
                   </Link>
                 ))}
               </nav>
-            </motion.aside>
+            </motion.div>
           </>
         )}
       </AnimatePresence>
