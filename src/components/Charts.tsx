@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import { cycleDay, phaseForDay, phasePalette } from '@/lib/phase';
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { cycleDay, phaseForDay, phasePalette } from "@/lib/phase";
 import {
   LineChart,
   Line,
@@ -14,25 +14,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
-  ReferenceArea,
-} from 'recharts';
-import { motion, AnimatePresence } from 'framer-motion';
-
-type Settings = {
-  start_date: string;
-  cycle_length: number;
-};
-
-type JournalRow = {
-  date: string;
-  phase: string | null;
-  mood: number | null;
-  energy: number | null;
-  stress: number | null;
-  warmth: number | null;
-  notes?: string | null;
-};
+} from "recharts";
 
 type ChartPoint = {
   date: string;
@@ -46,343 +28,96 @@ type ChartPoint = {
 
 function daysBetween(a: Date, b: Date) {
   const ms = 1000 * 60 * 60 * 24;
-  const da = new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime();
-  const db = new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime();
-  return Math.floor((da - db) / ms);
-}
-
-function phaseBands(cycleLength: number) {
-  const bands: { phase: string; start: number; end: number }[] = [];
-  let currentPhase = phaseForDay(1, cycleLength);
-  let start = 1;
-  for (let d = 2; d <= cycleLength; d++) {
-    const p = phaseForDay(d, cycleLength);
-    if (p !== currentPhase) {
-      bands.push({ phase: currentPhase, start, end: d - 1 });
-      currentPhase = p;
-      start = d;
-    }
-  }
-  bands.push({ phase: currentPhase, start, end: cycleLength });
-  return bands;
+  const da = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+  const db = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((db.getTime() - da.getTime()) / ms);
 }
 
 export function Charts() {
-  const [settings, setSettings] = useState<Settings | null>(null);
-  const [rows, setRows] = useState<JournalRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCycleIndex, setSelectedCycleIndex] = useState(0); // 0 = current
+  const [data, setData] = useState<ChartPoint[]>([]);
 
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        window.location.href = '/login';
-        return;
-      }
+      if (!user) return;
 
-      // Load settings
-      const { data: s } = await supabase
-        .from('settings')
-        .select('start_date, cycle_length')
-        .eq('user_id', user.id)
+      const { data: settings } = await supabase
+        .from("settings")
+        .select("start_date, cycle_length")
+        .eq("user_id", user.id)
         .maybeSingle();
+      if (!settings) return;
 
-      if (!s) {
-        setSettings(null);
-        setRows([]);
-        setLoading(false);
-        return;
-      }
+      const start = new Date(`${settings.start_date}T00:00:00`);
+      const { data: journals } = await supabase
+        .from("journals")
+        .select("date, mood, energy, stress, warmth")
+        .eq("user_id", user.id)
+        .order("date", { ascending: true });
 
-      // Load journals (last 180 days)
-      const start = new Date();
-      start.setDate(start.getDate() - 180);
-      const sinceStr = start.toISOString().slice(0, 10);
-
-      const { data: j } = await supabase
-        .from('journals')
-        .select('date, phase, mood, energy, stress, warmth, notes')
-        .gte('date', sinceStr)
-        .eq('user_id', user.id)
-        .order('date', { ascending: true });
-
-      setSettings({ start_date: s.start_date, cycle_length: s.cycle_length });
-      setRows(j ?? []);
-      setLoading(false);
+      const points: ChartPoint[] =
+        journals?.map((j: any) => {
+          const d = new Date(j.date);
+          return {
+            date: j.date,
+            cycleDay: cycleDay(d, start, Number(settings.cycle_length)),
+            phase: phaseForDay(cycleDay(d, start, Number(settings.cycle_length))),
+            mood: Number(j.mood ?? 0),
+            energy: Number(j.energy ?? 0),
+            stress: Number(j.stress ?? 0),
+            warmth: Number(j.warmth ?? 0),
+          };
+        }) ?? [];
+      setData(points);
     })();
   }, []);
 
-  // Build chart data
-  const chartDataAll = useMemo<ChartPoint[]>(() => {
-    if (!settings) return [];
-    const startD = new Date(settings.start_date);
-    return rows.map((r) => {
-      const d = new Date(r.date);
-      const cd = cycleDay(d, startD, settings.cycle_length);
-      const phase = r.phase || phaseForDay(cd, settings.cycle_length);
-      return {
-        date: r.date,
-        cycleDay: cd,
-        phase,
-        mood: r.mood ?? 0,
-        energy: r.energy ?? 0,
-        stress: r.stress ?? 0,
-        warmth: r.warmth ?? 0,
-      };
-    });
-  }, [rows, settings]);
-
-  // Group by cycles
-  const cycles = useMemo(() => {
-    if (!settings) return [];
-    const startD = new Date(settings.start_date);
-    const grouped: Record<number, ChartPoint[]> = {};
-    chartDataAll.forEach((pt) => {
-      const d = new Date(pt.date);
-      const delta = daysBetween(d, startD);
-      const idx = Math.floor(delta / settings.cycle_length);
-      (grouped[idx] ||= []).push(pt);
-    });
-    const indices = Object.keys(grouped)
-      .map(Number)
-      .sort((a, b) => a - b);
-    return indices.map((i) => grouped[i].sort((a, b) => a.cycleDay - b.cycleDay));
-  }, [chartDataAll, settings]);
-
-  const activeCycleData = useMemo(() => {
-    if (!cycles.length) return [];
-    const lastIndex = cycles.length - 1;
-    const indexFromEnd = Math.max(0, Math.min(selectedCycleIndex, lastIndex));
-    return cycles[lastIndex - indexFromEnd];
-  }, [cycles, selectedCycleIndex]);
-
-  // Phase averages (true averages)
-  const phaseAverages = useMemo(() => {
-    const source = activeCycleData;
-    const grouped: Record<
-      string,
-      { mood: number; energy: number; stress: number; warmth: number; count: number }
-    > = {};
-    source.forEach((p) => {
-      if (!grouped[p.phase]) grouped[p.phase] = { mood: 0, energy: 0, stress: 0, warmth: 0, count: 0 };
-      grouped[p.phase].mood += p.mood;
-      grouped[p.phase].energy += p.energy;
-      grouped[p.phase].stress += p.stress;
-      grouped[p.phase].warmth += p.warmth;
-      grouped[p.phase].count++;
-    });
-
-    const averages = Object.entries(grouped).map(([phase, data]) => {
-      const c = Math.max(1, data.count);
-      return {
-        phase,
-        mood: +(data.mood / c).toFixed(1),
-        energy: +(data.energy / c).toFixed(1),
-        stress: +(data.stress / c).toFixed(1),
-        warmth: +(data.warmth / c).toFixed(1),
-      };
-    });
-
-    const order = ['menstrual', 'follicular', 'ovulation', 'luteal'];
-    averages.sort((a, b) => order.indexOf(a.phase) - order.indexOf(b.phase));
-    return averages;
-  }, [activeCycleData]);
-
-  // Completion donut (last 30 days)
-  const completion = useMemo(() => {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
-    const lastThirty = rows.filter((r) => new Date(r.date) >= cutoff);
-    const totalDays = Math.max(lastThirty.length, 1);
-    const filledDays = lastThirty.filter(
-      (r) =>
-        (r.mood ?? 0) > 0 ||
-        (r.energy ?? 0) > 0 ||
-        (r.stress ?? 0) > 0 ||
-        (r.warmth ?? 0) > 0 ||
-        (r.notes ?? '').toString().trim().length > 0
-    ).length;
-    const done = Math.round((filledDays / totalDays) * 100);
-    return [
-      { name: 'Logged', value: done },
-      { name: 'Not logged', value: 100 - done },
-    ];
-  }, [rows]);
-
-  if (loading) return <p>Loading charts…</p>;
-
-  if (!settings) {
-    return (
-      <div className="p-4 rounded border">
-        <p>Please add your cycle settings first on the Settings page.</p>
-        <a href="/settings" className="underline">Open Settings</a>
-      </div>
-    );
-  }
-
-  const bands = phaseBands(settings.cycle_length);
+  const paletteFor = (p: string) => phasePalette(p as any)[0];
 
   return (
-    <div className="grid gap-6">
-      {/* Cycle selector */}
-      {cycles.length > 1 && (
-        <div className="flex items-center gap-2 justify-end">
-          <label className="text-sm text-gray-600">Cycle</label>
-          <select
-            className="border rounded p-1 text-sm"
-            value={selectedCycleIndex}
-            onChange={(e) => setSelectedCycleIndex(Number(e.target.value))}
-          >
-            {Array.from({ length: cycles.length }).map((_, offset) => {
-              const label = offset === 0 ? 'Current' : `${offset} ago`;
-              return (
-                <option key={offset} value={offset}>
-                  {label}
-                </option>
-              );
-            })}
-          </select>
-        </div>
-      )}
+    <div className="space-y-6">
+      {/* Line chart */}
+      <div className="h-56 w-full">
+        <ResponsiveContainer>
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f2cfd4" />
+            <XAxis
+              dataKey="cycleDay"
+              stroke="#7a5d5d"
+              tick={{ fontSize: 11 }}
+              label={{ value: "Cycle day", position: "insideBottomRight", offset: -3 }}
+            />
+            <YAxis domain={[0, 10]} stroke="#7a5d5d" tick={{ fontSize: 11 }} />
+            <Tooltip />
+            <Line type="monotone" dataKey="mood" stroke="#ef7997" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="energy" stroke="#7bc47f" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="stress" stroke="#a28ad6" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="warmth" stroke="#f0b35b" strokeWidth={2} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key="cycle"
-          initial={{ opacity: 0, x: -16 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 16 }}
-          transition={{ duration: 0.2 }}
-          className="grid gap-6"
-        >
-          {/* Line chart */}
-          <div className="p-4 rounded border">
-            <h3 className="font-semibold mb-2">
-              Mood, Energy, Stress, Warmth by cycle day
-            </h3>
-            <div style={{ width: '100%', height: 320 }}>
-              <ResponsiveContainer>
-                <LineChart data={activeCycleData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="cycleDay"
-                    type="number"
-                    domain={[1, settings.cycle_length]}
-                    tickFormatter={(v) => `Day ${v}`}
-                  />
-                  <YAxis domain={[0, 10]} />
-                  <Tooltip
-                    formatter={(value: any, name: any) => {
-                      const labelMap: Record<string, string> = {
-                        mood: 'Mood',
-                        energy: 'Energy',
-                        stress: 'Stress',
-                        warmth: 'Warmth',
-                      };
-                      return [value, labelMap[name] || name];
-                    }}
-                    labelFormatter={(label) => `Cycle day ${label}`}
-                  />
-                  <Legend />
-
-                  {/* Phase background bands */}
-                  {bands.map((b) => (
-                    <ReferenceArea
-                      key={`${b.phase}-${b.start}-${b.end}`}
-                      x1={b.start}
-                      x2={b.end}
-                      y1={0}
-                      y2={10}
-                      fill={(phasePalette as Record<string, string>)[b.phase] || '#eee'}
-                      fillOpacity={0.12}
-                      ifOverflow="extendDomain"
-                    />
-                  ))}
-
-                  <Line type="monotone" dataKey="mood" dot={false} stroke="#c26aa3" />
-                  <Line type="monotone" dataKey="energy" dot={false} stroke="#8bbd7c" />
-                  <Line type="monotone" dataKey="stress" dot={false} stroke="#f28b82" />
-                  <Line type="monotone" dataKey="warmth" dot={false} stroke="#f8a5c2" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="text-sm text-gray-600 mt-2">
-              Shaded backgrounds show your hormonal phases. Trends are unique to you.
-            </p>
-          </div>
-
-          {/* Phase summary cards */}
-          <div className="p-4 rounded border">
-            <h3 className="font-semibold mb-3">Phase summaries (averages)</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              {phaseAverages.map((p) => (
-                <div
-                  key={p.phase}
-                  className="rounded-lg p-3 border"
-                  style={{
-                    background: `${(phasePalette as Record<string, string>)[p.phase] || '#eee'}20`,
-                    borderColor: `${(phasePalette as Record<string, string>)[p.phase] || '#eee'}55`,
-                  }}
-                >
-                  <div className="font-medium capitalize mb-1">{p.phase}</div>
-                  <div className="text-sm grid grid-cols-2 gap-y-1">
-                    <span className="text-gray-600">Mood</span><span>{p.mood}</span>
-                    <span className="text-gray-600">Energy</span><span>{p.energy}</span>
-                    <span className="text-gray-600">Stress</span><span>{p.stress}</span>
-                    <span className="text-gray-600">Warmth</span><span>{p.warmth}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Logging completion */}
-          <div className="p-4 rounded border">
-            <h3 className="font-semibold mb-2">Logging completion (last 30 days)</h3>
-            <div style={{ width: '100%', height: 240 }}>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={completion}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                  >
-                    {completion.map((entry, i) => (
-                      <Cell
-                        key={`cell-${i}`}
-                        fill={i === 0 ? '#8bbd7c' : '#e8e8e8'}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Phase color legend */}
-          <div className="p-4 rounded border">
-            <h3 className="font-semibold mb-2">Phase colors</h3>
-            <div className="flex gap-3 flex-wrap">
-              {Object.entries(phasePalette).map(([phase, color]) => (
-                <div key={phase} className="flex items-center gap-2">
-                  <span
-                    className="inline-block w-4 h-4 rounded"
-                    style={{ background: color }}
-                  />
-                  <span className="capitalize">{phase}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
+      {/* Completion donut example */}
+      <div className="h-44 w-full">
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={[
+                { name: "Logged", value: data.length },
+                { name: "Not logged", value: Math.max(30 - data.length, 0) },
+              ]}
+              innerRadius={38}
+              outerRadius={60}
+              paddingAngle={2}
+              dataKey="value"
+            >
+              <Cell fill="#7bc47f" />
+              <Cell fill="#f2cfd4" />
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
