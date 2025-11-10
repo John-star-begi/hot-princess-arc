@@ -1,7 +1,6 @@
 import "../styles/globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import NavigatorDrawer from "@/components/NavigatorDrawer";
-import Link from "next/link";
 
 export const metadata = {
   title: "Hot Princess Arc",
@@ -15,26 +14,33 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-princess-cream text-gray-800 antialiased">
+      <body className="text-rose-900 antialiased bg-gradient-to-b from-[#FFF6E5] to-[#FFECEF]">
         <AuthProvider>
-          {/* Top bar is STICKY not fixed, so it does not cover content and it releases space while scrolling */}
-          <header className="sticky top-0 z-30 bg-pink-100/90 backdrop-blur-md border-b border-pink-200">
-            <div className="flex items-center justify-between px-3 py-2 max-w-screen-sm mx-auto">
-              <NavigatorDrawer />
+          {/* Header — now minimal, balanced, and mobile-friendly */}
+          <header className="sticky top-0 z-50 backdrop-blur bg-white/70 border-b border-white/40">
+            <div className="section flex items-center justify-between py-3">
+              {/* Left: Menu Button */}
+              <div className="flex items-center gap-2">
+                <NavigatorDrawer />
+              </div>
 
-              <Link href="/dashboard" className="shrink-0">
-                <h1 className="text-base font-semibold tracking-tight text-gray-800">
-                  👑 Hot Princess Arc
-                </h1>
-              </Link>
+              {/* Center: App Title */}
+              <h1 className="text-base sm:text-lg font-semibold text-rose-900 flex items-center gap-1">
+                <span role="img" aria-label="crown">
+                  👑
+                </span>
+                Hot Princess Arc
+              </h1>
 
-              {/* Right spacer for symmetry */}
-              <div className="w-6" />
+              {/* Right: Spacer for symmetry */}
+              <div className="w-9 h-9" />
             </div>
           </header>
 
-          {/* Constrain width for comfy reading on mobile and tablets */}
-          <main className="mx-auto max-w-screen-sm w-full">{children}</main>
+          {/* Main Content Area */}
+          <main className="section py-6 sm:py-8">
+            {children}
+          </main>
         </AuthProvider>
       </body>
     </html>
