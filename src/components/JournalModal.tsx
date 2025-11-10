@@ -1,5 +1,4 @@
-'use client';
-
+'use client'; 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getUser, loadUserSettings, loadJournal, saveJournal, JournalForm } from '@/lib/journal';
@@ -49,7 +48,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
   async function handleSave() {
     try {
       const user = await getUser();
-     const { message } = await saveJournal(user.id, today, form, userSettings ?? undefined);
+      const { message } = await saveJournal(user.id, today, form, userSettings ?? undefined);
       setMessage(message);
       setIsAlreadyLogged(true);
     } catch {
@@ -102,9 +101,10 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
                   max={10}
                   className="w-full rounded-full bg-gradient-to-r from-[#FFF9F3] to-[#FFEAE3] px-4 py-2 text-rose-900 focus:ring-2 focus:ring-rose-200 focus:outline-none"
                   value={(form as any)[key]}
-                  onChange={(e) =>
-                    setForm({ ...form, [key]: parseInt(e.target.value || '5', 10) })
-                  }
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? '' : parseInt(e.target.value, 10);
+                    setForm({ ...form, [key]: value });
+                  }}
                   disabled={isAlreadyLogged}
                 />
               </div>
