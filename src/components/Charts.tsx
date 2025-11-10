@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import { cycleDay, phaseForDay, phasePalette } from '@/lib/phase';
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { cycleDay, phaseForDay, phasePalette } from "@/lib/phase";
 import {
   LineChart,
   Line,
@@ -11,13 +11,10 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
   ReferenceArea,
-} from 'recharts';
-import { motion, AnimatePresence } from 'framer-motion';
+  Area,
+} from "recharts";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Settings = {
   start_date: string;
@@ -75,17 +72,19 @@ export function Charts() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        window.location.href = '/login';
+        window.location.href = "/login";
         return;
       }
 
       // Load settings
       const { data: s } = await supabase
-        .from('settings')
-        .select('start_date, cycle_length')
-        .eq('user_id', user.id)
+        .from("settings")
+        .select("start_date, cycle_length")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!s) {
@@ -101,11 +100,11 @@ export function Charts() {
       const sinceStr = start.toISOString().slice(0, 10);
 
       const { data: j } = await supabase
-        .from('journals')
-        .select('date, phase, mood, energy, stress, warmth, notes')
-        .gte('date', sinceStr)
-        .eq('user_id', user.id)
-        .order('date', { ascending: true });
+        .from("journals")
+        .select("date, phase, mood, energy, stress, warmth, notes")
+        .gte("date", sinceStr)
+        .eq("user_id", user.id)
+        .order("date", { ascending: true });
 
       setSettings({ start_date: s.start_date, cycle_length: s.cycle_length });
       setRows(j ?? []);
@@ -184,31 +183,10 @@ export function Charts() {
       };
     });
 
-    const order = ['menstrual', 'follicular', 'ovulation', 'luteal'];
+    const order = ["menstrual", "follicular", "ovulation", "luteal"];
     averages.sort((a, b) => order.indexOf(a.phase) - order.indexOf(b.phase));
     return averages;
   }, [activeCycleData]);
-
-  // Completion donut (last 30 days)
-  const completion = useMemo(() => {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
-    const lastThirty = rows.filter((r) => new Date(r.date) >= cutoff);
-    const totalDays = Math.max(lastThirty.length, 1);
-    const filledDays = lastThirty.filter(
-      (r) =>
-        (r.mood ?? 0) > 0 ||
-        (r.energy ?? 0) > 0 ||
-        (r.stress ?? 0) > 0 ||
-        (r.warmth ?? 0) > 0 ||
-        (r.notes ?? '').toString().trim().length > 0
-    ).length;
-    const done = Math.round((filledDays / totalDays) * 100);
-    return [
-      { name: 'Logged', value: done },
-      { name: 'Not logged', value: 100 - done },
-    ];
-  }, [rows]);
 
   if (loading) return <p>Loading charts…</p>;
 
@@ -216,26 +194,36 @@ export function Charts() {
     return (
       <div className="p-4 rounded border">
         <p>Please add your cycle settings first on the Settings page.</p>
-        <a href="/settings" className="underline">Open Settings</a>
+        <a href="/settings" className="underline">
+          Open Settings
+        </a>
       </div>
     );
   }
 
   const bands = phaseBands(settings.cycle_length);
 
+  // Soft colors for lines (matching your palette)
+  const COLORS = {
+    mood: "#F7A7A7", // rose
+    energy: "#CDEDC7", // mint
+    stress: "#FFE083", // honey
+    warmth: "#D1B3FF", // lavender
+  };
+
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-8">
       {/* Cycle selector */}
       {cycles.length > 1 && (
         <div className="flex items-center gap-2 justify-end">
-          <label className="text-sm text-gray-600">Cycle</label>
+          <label className="text-sm text-rose-800/70">Cycle</label>
           <select
-            className="border rounded p-1 text-sm"
+            className="border border-white/50 bg-white/70 rounded px-2 py-1 text-sm shadow-sm"
             value={selectedCycleIndex}
             onChange={(e) => setSelectedCycleIndex(Number(e.target.value))}
           >
             {Array.from({ length: cycles.length }).map((_, offset) => {
-              const label = offset === 0 ? 'Current' : `${offset} ago`;
+              const label = offset === 0 ? "Current" : `${offset} ago`;
               return (
                 <option key={offset} value={offset}>
                   {label}
@@ -248,141 +236,251 @@ export function Charts() {
 
       <AnimatePresence mode="wait">
         <motion.div
-          key="cycle"
-          initial={{ opacity: 0, x: -16 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 16 }}
-          transition={{ duration: 0.2 }}
-          className="grid gap-6"
+          key="energy-flow"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 12 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="
+            rounded-3xl bg-gradient-to-b from-[#FFF9F3] to-[#FFEAE3]
+            backdrop-blur-xl shadow-[0_8px_30px_rgba(255,180,170,0.25)]
+            p-6 space-y-4 border border-white/40
+          "
         >
-          {/* Line chart */}
-          <div className="p-4 rounded border">
-            <h3 className="font-semibold mb-2">
-              Mood, Energy, Stress, Warmth by cycle day
-            </h3>
-            <div style={{ width: '100%', height: 320 }}>
-              <ResponsiveContainer>
-                <LineChart data={activeCycleData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="cycleDay"
-                    type="number"
-                    domain={[1, settings.cycle_length]}
-                    tickFormatter={(v) => `Day ${v}`}
-                  />
-                  <YAxis domain={[0, 10]} />
-                  <Tooltip
-                    formatter={(value: any, name: any) => {
-                      const labelMap: Record<string, string> = {
-                        mood: 'Mood',
-                        energy: 'Energy',
-                        stress: 'Stress',
-                        warmth: 'Warmth',
-                      };
-                      return [value, labelMap[name] || name];
-                    }}
-                    labelFormatter={(label) => `Cycle day ${label}`}
-                  />
-                  <Legend />
+          {/* Titles */}
+          <h3 className="text-center font-serif italic text-[20px] text-[#6E4E46]">
+            Your Energy Flow
+          </h3>
+          <p className="text-center text-sm text-rose-900/70">
+            Your moods, energy, and warmth — gently shifting with time.
+          </p>
 
-                  {/* Phase background bands */}
-                  {bands.map((b) => (
-                    <ReferenceArea
-                      key={`${b.phase}-${b.start}-${b.end}`}
-                      x1={b.start}
-                      x2={b.end}
-                      y1={0}
-                      y2={10}
-                      fill={(phasePalette as Record<string, string>)[b.phase] || '#eee'}
-                      fillOpacity={0.12}
-                      ifOverflow="extendDomain"
-                    />
-                  ))}
+          {/* Chart area */}
+          <div className="relative h-[260px] w-full rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(255,180,170,0.18)]">
+            <div className="absolute inset-0 bg-[linear-gradient(to_bottom,#FFF9F3_0%,#FFEAE3_100%)]" />
+            <ResponsiveContainer>
+              <LineChart
+                data={activeCycleData}
+                margin={{ top: 16, right: 20, bottom: 8, left: 8 }}
+              >
+                {/* Soft horizontal guides only */}
+                <CartesianGrid
+                  vertical={false}
+                  stroke="rgba(125, 85, 80, 0.10)"
+                  strokeDasharray="3 3"
+                />
 
-                  <Line type="monotone" dataKey="mood" dot={false} stroke="#c26aa3" />
-                  <Line type="monotone" dataKey="energy" dot={false} stroke="#8bbd7c" />
-                  <Line type="monotone" dataKey="stress" dot={false} stroke="#f28b82" />
-                  <Line type="monotone" dataKey="warmth" dot={false} stroke="#f8a5c2" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="text-sm text-gray-600 mt-2">
-              Shaded backgrounds show your hormonal phases. Trends are unique to you.
-            </p>
-          </div>
+                <XAxis
+                  dataKey="cycleDay"
+                  type="number"
+                  domain={[1, settings.cycle_length]}
+                  tickFormatter={(v) => `Day ${v}`}
+                  tick={{ fill: "rgba(110, 78, 70, 0.6)", fontSize: 12 }}
+                  axisLine={{ stroke: "rgba(110, 78, 70, 0.15)" }}
+                  tickLine={{ stroke: "rgba(110, 78, 70, 0.15)" }}
+                />
+                <YAxis
+                  domain={[0, 10]}
+                  ticks={[0, 3, 6, 10]}
+                  tick={{ fill: "rgba(110, 78, 70, 0.6)", fontSize: 12 }}
+                  axisLine={{ stroke: "rgba(110, 78, 70, 0.15)" }}
+                  tickLine={{ stroke: "rgba(110, 78, 70, 0.15)" }}
+                />
 
-          {/* Phase summary cards */}
-          <div className="p-4 rounded border">
-            <h3 className="font-semibold mb-3">Phase summaries (averages)</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              {phaseAverages.map((p) => (
-                <div
-                  key={p.phase}
-                  className="rounded-lg p-3 border"
-                  style={{
-                    background: `${(phasePalette as Record<string, string>)[p.phase] || '#eee'}20`,
-                    borderColor: `${(phasePalette as Record<string, string>)[p.phase] || '#eee'}55`,
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 12,
+                    border: "1px solid rgba(255,255,255,0.6)",
+                    background: "rgba(255,249,243,0.95)",
+                    boxShadow: "0 8px 24px rgba(255,180,170,0.25)",
                   }}
-                >
-                  <div className="font-medium capitalize mb-1">{p.phase}</div>
-                  <div className="text-sm grid grid-cols-2 gap-y-1">
-                    <span className="text-gray-600">Mood</span><span>{p.mood}</span>
-                    <span className="text-gray-600">Energy</span><span>{p.energy}</span>
-                    <span className="text-gray-600">Stress</span><span>{p.stress}</span>
-                    <span className="text-gray-600">Warmth</span><span>{p.warmth}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+                  formatter={(value: any, name: any) => {
+                    const labelMap: Record<string, string> = {
+                      mood: "Mood",
+                      energy: "Energy",
+                      stress: "Stress",
+                      warmth: "Warmth",
+                    };
+                    return [value, labelMap[name] || name];
+                  }}
+                  labelFormatter={(label) => `Cycle day ${label}`}
+                />
 
-          {/* Logging completion */}
-          <div className="p-4 rounded border">
-            <h3 className="font-semibold mb-2">Logging completion (last 30 days)</h3>
-            <div style={{ width: '100%', height: 240 }}>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={completion}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                  >
-                    {completion.map((entry, i) => (
-                      <Cell
-                        key={`cell-${i}`}
-                        fill={i === 0 ? '#8bbd7c' : '#e8e8e8'}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Phase color legend */}
-          <div className="p-4 rounded border">
-            <h3 className="font-semibold mb-2">Phase colors</h3>
-            <div className="flex gap-3 flex-wrap">
-              {Object.entries(phasePalette).map(([phase, color]) => (
-                <div key={phase} className="flex items-center gap-2">
-                  <span
-                    className="inline-block w-4 h-4 rounded"
-                    style={{ background: color }}
+                {/* Phase background bands (soft veil) */}
+                {phaseBands(settings.cycle_length).map((b) => (
+                  <ReferenceArea
+                    key={`${b.phase}-${b.start}-${b.end}`}
+                    x1={b.start}
+                    x2={b.end}
+                    y1={0}
+                    y2={10}
+                    fill={(phasePalette as Record<string, string>)[b.phase] || "#eee"}
+                    fillOpacity={0.08}
+                    ifOverflow="extendDomain"
                   />
-                  <span className="capitalize">{phase}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+
+                {/* Area fills for watercolor effect */}
+                <defs>
+                  <linearGradient id="fillMood" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={COLORS.mood} stopOpacity={0.18} />
+                    <stop offset="100%" stopColor={COLORS.mood} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="fillEnergy" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={COLORS.energy} stopOpacity={0.18} />
+                    <stop offset="100%" stopColor={COLORS.energy} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="fillStress" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={COLORS.stress} stopOpacity={0.18} />
+                    <stop offset="100%" stopColor={COLORS.stress} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="fillWarmth" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={COLORS.warmth} stopOpacity={0.18} />
+                    <stop offset="100%" stopColor={COLORS.warmth} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+
+                <Area
+                  type="monotone"
+                  dataKey="mood"
+                  stroke="transparent"
+                  fill="url(#fillMood)"
+                  isAnimationActive
+                  animationDuration={1200}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="energy"
+                  stroke="transparent"
+                  fill="url(#fillEnergy)"
+                  isAnimationActive
+                  animationDuration={1200}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="stress"
+                  stroke="transparent"
+                  fill="url(#fillStress)"
+                  isAnimationActive
+                  animationDuration={1200}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="warmth"
+                  stroke="transparent"
+                  fill="url(#fillWarmth)"
+                  isAnimationActive
+                  animationDuration={1200}
+                />
+
+                {/* Curved, soft-glow lines */}
+                <Line
+                  type="monotone"
+                  dataKey="mood"
+                  stroke={COLORS.mood}
+                  strokeWidth={1.5}
+                  dot={false}
+                  opacity={0.9}
+                  isAnimationActive
+                  animationDuration={1800}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="energy"
+                  stroke={COLORS.energy}
+                  strokeWidth={1.5}
+                  dot={false}
+                  opacity={0.9}
+                  isAnimationActive
+                  animationDuration={1800}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="stress"
+                  stroke={COLORS.stress}
+                  strokeWidth={1.5}
+                  dot={false}
+                  opacity={0.9}
+                  isAnimationActive
+                  animationDuration={1800}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="warmth"
+                  stroke={COLORS.warmth}
+                  strokeWidth={1.5}
+                  dot={false}
+                  opacity={0.9}
+                  isAnimationActive
+                  animationDuration={1800}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Custom soft legend */}
+          <div className="flex justify-center gap-6 text-sm text-rose-900/80">
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS.mood }} />
+              mood
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS.energy }} />
+              energy
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS.stress }} />
+              stress
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS.warmth }} />
+              warmth
+            </span>
           </div>
         </motion.div>
       </AnimatePresence>
+
+      {/* Phase summaries (averages) */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: "easeInOut", delay: 0.05 }}
+        className="rounded-3xl p-6 bg-white/60 backdrop-blur-md border border-white/40 shadow-[0_8px_30px_rgba(255,180,170,0.20)]"
+      >
+        <h3 className="font-serif text-[18px] text-rose-900 mb-4">
+          Phase summaries (averages)
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {phaseAverages.map((p) => {
+            const color = (phasePalette as Record<string, string>)[p.phase] || "#eee";
+            return (
+              <div
+                key={p.phase}
+                className="rounded-2xl p-4 border shadow-sm"
+                style={{
+                  background: `${color}20`,
+                  borderColor: `${color}55`,
+                }}
+              >
+                <div className="font-serif text-rose-900 text-lg capitalize mb-1">
+                  🌷 {p.phase}
+                </div>
+                <div className="text-sm grid grid-cols-2 gap-y-1 text-rose-900/80">
+                  <span>Mood</span>
+                  <span>{p.mood}</span>
+                  <span>Energy</span>
+                  <span>{p.energy}</span>
+                  <span>Stress</span>
+                  <span>{p.stress}</span>
+                  <span>Warmth</span>
+                  <span>{p.warmth}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </motion.div>
     </div>
   );
 }
+
