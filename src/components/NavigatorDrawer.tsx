@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -8,80 +7,70 @@ import { MoreHorizontal } from "lucide-react";
 export default function NavigatorDrawer() {
   const [open, setOpen] = useState(false);
 
-  const links: { name: string; href: string }[] = [
+  const links = [
     { name: "Dashboard", href: "/dashboard" },
-    { name: "Phases Overview", href: "/phase/menstrual" },
-    { name: "Nutrition", href: "/phase/menstrual#nutrition" },
-    { name: "Movement", href: "/phase/menstrual#movement" },
+    { name: "Phase Guide", href: "/phase/menstrual" },
     { name: "Journal", href: "/journal" },
     { name: "Settings", href: "/settings" },
   ];
 
   return (
-    <>
+    <div className="relative">
       {/* Small circular menu button */}
       <button
+        aria-label="Open navigation menu"
         onClick={() => setOpen(true)}
-        aria-label="Open menu"
-        className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-rose-200/70 hover:bg-rose-300/80 border border-rose-100 shadow-sm backdrop-blur-sm text-rose-700 transition"
+        className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-rose-200/70 hover:bg-rose-300 border border-rose-100 shadow-sm backdrop-blur-sm"
       >
-        <MoreHorizontal size={20} />
+        <MoreHorizontal className="w-5 h-5 text-rose-700" />
       </button>
 
       <AnimatePresence>
         {open && (
           <>
-            {/* Backdrop */}
+            {/* Dim background overlay */}
             <motion.div
-              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+              className="fixed inset-0 bg-black/30 backdrop-blur-[1px]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setOpen(false)}
             />
 
-            {/* Drawer panel */}
+            {/* Solid dropdown panel */}
             <motion.div
-              className="fixed top-0 left-0 w-64 h-full bg-gradient-to-b from-rose-50 to-pink-100 shadow-2xl z-50 p-6 flex flex-col"
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: "spring", stiffness: 260, damping: 25 }}
+              className="absolute left-0 top-12 w-60 rounded-xl bg-[#FFF9F8] shadow-lg border border-rose-100 z-50"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
             >
-              {/* Header */}
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="font-semibold text-lg text-rose-900">Navigator</h2>
+              <div className="flex items-center justify-between px-4 py-2 border-b border-rose-100">
+                <h3 className="text-rose-800 font-semibold">Navigator</h3>
                 <button
                   onClick={() => setOpen(false)}
                   aria-label="Close menu"
-                  className="text-rose-700 hover:text-rose-900"
+                  className="text-rose-500 hover:text-rose-700 font-bold text-lg"
                 >
-                  ✕
+                  ×
                 </button>
               </div>
 
-              {/* Navigation Links */}
-              <nav className="space-y-2">
-                {links.map((item) => (
+              <nav className="flex flex-col p-2">
+                {links.map((link) => (
                   <Link
-                    key={item.href}
-                    href={item.href as unknown as URL} // ✅ type-safe fix for Next.js strict typing
+                    key={link.href}
+                    href={link.href}
                     onClick={() => setOpen(false)}
-                    className="block py-2 px-3 rounded-lg text-rose-900 hover:bg-white/70 hover:text-rose-800 transition"
+                    className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
                   >
-                    {item.name}
+                    {link.name}
                   </Link>
                 ))}
               </nav>
-
-              {/* Footer spacing for iOS safe area */}
-              <div className="mt-auto pt-6 text-xs text-rose-700 opacity-60">
-                Hot Princess Arc © {new Date().getFullYear()}
-              </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 }
