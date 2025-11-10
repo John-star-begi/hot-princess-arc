@@ -4,18 +4,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import type { Route } from "next";
 
-/* ✅ Modern pastel drawer that covers part of the screen (not full width)
-   ✅ Solid background
-   ✅ Closes when tapping outside
-   ✅ Vercel-safe
-*/
-
+/* Drawer: solid pastel, left-side only, sits below header, no pill "x" */
 export default function NavigatorDrawer() {
   const [open, setOpen] = useState(false);
 
+  // Approx header height: adjust if you tweak header padding later
+  const HEADER_PX = 60; // matches sticky header height
+
   return (
     <div className="relative">
-      {/* Menu button */}
+      {/* Small circular trigger */}
       <button
         aria-label="Open navigation menu"
         onClick={() => setOpen(true)}
@@ -36,32 +34,41 @@ export default function NavigatorDrawer() {
       <AnimatePresence>
         {open && (
           <>
-            {/* Dim background */}
+            {/* Backdrop (click to close) */}
             <motion.div
-              className="fixed inset-0 bg-black/30 z-40"
+              className="fixed inset-0 bg-black/30 z-[9998]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setOpen(false)}
             />
 
-            {/* Drawer: solid, soft pastel, not full screen */}
+            {/* Left drawer: below header only, solid background */}
             <motion.div
-              className="fixed top-[60px] left-0 h-[calc(100%-60px)] w-[65%] max-w-xs bg-[#FFF5F3] shadow-2xl border-r border-rose-100 z-50 flex flex-col"
+              className="fixed left-0 z-[9999] bg-[#FFF5F3] shadow-2xl border-r border-rose-100 flex flex-col"
+              style={{
+                top: HEADER_PX,
+                height: `calc(100% - ${HEADER_PX}px)`,
+                width: "70%",
+                maxWidth: "18rem",
+              }}
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", stiffness: 280, damping: 30 }}
             >
-              {/* Close button */}
+              {/* Close control: span (not button) so global button CSS won't style it */}
               <div className="flex justify-end p-3">
-                <button
-                  onClick={() => setOpen(false)}
+                <span
+                  role="button"
+                  tabIndex={0}
                   aria-label="Close menu"
-                  className="text-rose-500 hover:text-rose-700 text-sm"
+                  onClick={() => setOpen(false)}
+                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setOpen(false)}
+                  className="text-rose-500 hover:text-rose-700 text-sm cursor-pointer select-none"
                 >
                   x
-                </button>
+                </span>
               </div>
 
               {/* Links */}
@@ -73,7 +80,6 @@ export default function NavigatorDrawer() {
                 >
                   Dashboard
                 </Link>
-
                 <Link
                   href={"/phase/overview" as Route}
                   onClick={() => setOpen(false)}
@@ -81,7 +87,6 @@ export default function NavigatorDrawer() {
                 >
                   Phase Overview
                 </Link>
-
                 <Link
                   href={"/nutrition" as Route}
                   onClick={() => setOpen(false)}
@@ -89,7 +94,6 @@ export default function NavigatorDrawer() {
                 >
                   Nutrition
                 </Link>
-
                 <Link
                   href={"/movement" as Route}
                   onClick={() => setOpen(false)}
@@ -97,7 +101,6 @@ export default function NavigatorDrawer() {
                 >
                   Movement
                 </Link>
-
                 <Link
                   href={"/journal" as Route}
                   onClick={() => setOpen(false)}
@@ -105,7 +108,6 @@ export default function NavigatorDrawer() {
                 >
                   Journal
                 </Link>
-
                 <Link
                   href={"/settings" as Route}
                   onClick={() => setOpen(false)}
