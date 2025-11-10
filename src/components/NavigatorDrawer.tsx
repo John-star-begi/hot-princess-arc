@@ -2,7 +2,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { MoreHorizontal } from "lucide-react";
+import type { Route } from "next";
+
+/* ✅ This version avoids type errors on routes that don't exist yet
+   by marking them explicitly with "as Route".
+*/
 
 export default function NavigatorDrawer() {
   const [open, setOpen] = useState(false);
@@ -15,7 +19,16 @@ export default function NavigatorDrawer() {
         onClick={() => setOpen(true)}
         className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-rose-200/70 hover:bg-rose-300 border border-rose-100 shadow-sm backdrop-blur-sm"
       >
-        <MoreHorizontal className="w-5 h-5 text-rose-700" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-5 h-5 text-rose-700"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h12M6 6h12M6 18h12" />
+        </svg>
       </button>
 
       <AnimatePresence>
@@ -52,7 +65,7 @@ export default function NavigatorDrawer() {
               {/* Nav links */}
               <nav className="flex flex-col p-2">
                 <Link
-                  href="/dashboard"
+                  href={"/dashboard" as Route}
                   onClick={() => setOpen(false)}
                   className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
                 >
@@ -60,7 +73,7 @@ export default function NavigatorDrawer() {
                 </Link>
 
                 <Link
-                  href="/phase/overview"
+                  href={"/phase/overview" as Route}
                   onClick={() => setOpen(false)}
                   className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
                 >
@@ -68,7 +81,7 @@ export default function NavigatorDrawer() {
                 </Link>
 
                 <Link
-                  href="/nutrition"
+                  href={"/nutrition" as Route}
                   onClick={() => setOpen(false)}
                   className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
                 >
@@ -76,7 +89,7 @@ export default function NavigatorDrawer() {
                 </Link>
 
                 <Link
-                  href="/movement"
+                  href={"/movement" as Route}
                   onClick={() => setOpen(false)}
                   className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
                 >
@@ -84,7 +97,7 @@ export default function NavigatorDrawer() {
                 </Link>
 
                 <Link
-                  href="/journal"
+                  href={"/journal" as Route}
                   onClick={() => setOpen(false)}
                   className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
                 >
@@ -92,7 +105,7 @@ export default function NavigatorDrawer() {
                 </Link>
 
                 <Link
-                  href="/settings"
+                  href={"/settings" as Route}
                   onClick={() => setOpen(false)}
                   className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
                 >
