@@ -473,6 +473,12 @@ function YesNoRow({
 }
 
 // slight variant to avoid label collision
-function YesNoRowRow(props: any) {
+function YesNoRowRow(props: {
+  label: string;
+  value: boolean | null | undefined;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
   return <YesNoRow {...props} />;
 }
+
