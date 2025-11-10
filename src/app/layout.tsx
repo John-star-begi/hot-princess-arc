@@ -16,15 +16,13 @@ export default function RootLayout({
     <html lang="en">
       <body className="text-rose-900 antialiased bg-gradient-to-b from-[#FFF6E5] to-[#FFECEF]">
         <AuthProvider>
-          {/* Header — now minimal, balanced, and mobile-friendly */}
+          {/* Header */}
           <header className="sticky top-0 z-50 backdrop-blur bg-white/70 border-b border-white/40">
-            <div className="section flex items-center justify-between py-3">
-              {/* Left: Menu Button */}
-              <div className="flex items-center gap-2">
-                <NavigatorDrawer />
-              </div>
+            <div className="section flex items-center justify-between py-3 px-3">
+              {/* Left: Menu */}
+              <NavigatorDrawer />
 
-              {/* Center: App Title */}
+              {/* Center: Title */}
               <h1 className="text-base sm:text-lg font-semibold text-rose-900 flex items-center gap-1">
                 <span role="img" aria-label="crown">
                   👑
@@ -32,12 +30,12 @@ export default function RootLayout({
                 Hot Princess Arc
               </h1>
 
-              {/* Right: Spacer for symmetry */}
+              {/* Spacer for symmetry */}
               <div className="w-9 h-9" />
             </div>
           </header>
 
-          {/* Main Content Area */}
+          {/* Main */}
           <main className="section py-6 sm:py-8">
             {children}
           </main>
