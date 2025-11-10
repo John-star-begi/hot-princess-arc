@@ -53,14 +53,14 @@ export default function MonthCalendar({
       <div className="flex justify-between items-center mb-4">
         <button
           onClick={() => changeMonth(-1)}
-          className="text-2xl text-rose-500 hover:text-rose-700 transition"
+          className="text-2xl text-rose-500 hover:text-rose-700 transition bg-transparent border-none shadow-none focus:outline-none"
           aria-label="Previous month"
         >
           ←
         </button>
 
         <div className="relative">
-          <h3 className="font-serif italic text-[18px] tracking-wide text-[#6E4E46] select-none">
+          <h3 className="font-serif italic text-[18px] sm:text-[20px] tracking-wide text-[#6E4E46] select-none">
             {viewDate.toLocaleString(undefined, { month: "long", year: "numeric" })}
           </h3>
           {/* Tiny shimmer pulse under month name */}
@@ -74,7 +74,7 @@ export default function MonthCalendar({
 
         <button
           onClick={() => changeMonth(1)}
-          className="text-2xl text-rose-500 hover:text-rose-700 transition"
+          className="text-2xl text-rose-500 hover:text-rose-700 transition bg-transparent border-none shadow-none focus:outline-none"
           aria-label="Next month"
         >
           →
@@ -142,7 +142,7 @@ export default function MonthCalendar({
                     {d.getDate()}
                   </span>
 
-                  {/* Phase dot – now solid, not transparent */}
+                  {/* Phase dot – now solid opaque */}
                   <span
                     className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
                     style={{ backgroundColor: color, opacity: 1 }}
