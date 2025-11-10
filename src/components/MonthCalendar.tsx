@@ -42,7 +42,7 @@ export default function MonthCalendar({
 
   return (
     <div
-      className="rounded-[28px] p-6 bg-gradient-to-br from-[#FFF6E5] to-[#FFECEF] 
+      className="rounded-[28px] p-6 bg-gradient-to-br from-[#FFF6E5] to-[#FFECEF]
                  backdrop-blur-xl shadow-[0_8px_30px_rgba(255,180,170,0.25)] border border-white/40"
       style={{
         boxShadow:
@@ -53,7 +53,8 @@ export default function MonthCalendar({
       <div className="flex justify-between items-center mb-4">
         <button
           onClick={() => changeMonth(-1)}
-          className="px-3 py-1.5 rounded-full bg-gradient-to-b from-white to-rose-50 border border-rose-100 text-rose-700 hover:brightness-105 active:brightness-95 transition"
+          className="text-2xl text-rose-500 hover:text-rose-700 transition"
+          aria-label="Previous month"
         >
           ←
         </button>
@@ -73,7 +74,8 @@ export default function MonthCalendar({
 
         <button
           onClick={() => changeMonth(1)}
-          className="px-3 py-1.5 rounded-full bg-gradient-to-b from-white to-rose-50 border border-rose-100 text-rose-700 hover:brightness-105 active:brightness-95 transition"
+          className="text-2xl text-rose-500 hover:text-rose-700 transition"
+          aria-label="Next month"
         >
           →
         </button>
@@ -140,10 +142,10 @@ export default function MonthCalendar({
                     {d.getDate()}
                   </span>
 
-                  {/* Phase dot */}
+                  {/* Phase dot – now solid, not transparent */}
                   <span
-                    className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full transition-all duration-300"
-                    style={{ backgroundColor: color, opacity: 0.3 }}
+                    className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: color, opacity: 1 }}
                   />
                 </motion.a>
               );
