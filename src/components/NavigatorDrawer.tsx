@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -8,23 +9,23 @@ export default function NavigatorDrawer() {
   const [open, setOpen] = useState(false);
 
   const links: { name: string; href: string }[] = [
-    { name: "Today", href: "/dashboard" },
-    { name: "Phase Overview", href: "/phase/menstrual" },
+    { name: "Dashboard", href: "/dashboard" },
+    { name: "Phases Overview", href: "/phase/menstrual" },
     { name: "Nutrition", href: "/phase/menstrual#nutrition" },
     { name: "Movement", href: "/phase/menstrual#movement" },
-    { name: "Mindset", href: "/phase/menstrual#mindset" },
     { name: "Journal", href: "/journal" },
     { name: "Settings", href: "/settings" },
   ];
 
   return (
     <>
-      {/* Top-left three-dot button */}
+      {/* Small circular menu button */}
       <button
         onClick={() => setOpen(true)}
-        className="p-2 text-gray-700 rounded-full hover:bg-pink-100"
+        aria-label="Open menu"
+        className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-rose-200/70 hover:bg-rose-300/80 border border-rose-100 shadow-sm backdrop-blur-sm text-rose-700 transition"
       >
-        <MoreHorizontal size={22} />
+        <MoreHorizontal size={20} />
       </button>
 
       <AnimatePresence>
@@ -39,36 +40,44 @@ export default function NavigatorDrawer() {
               onClick={() => setOpen(false)}
             />
 
-            {/* Drawer */}
+            {/* Drawer panel */}
             <motion.div
-              className="fixed top-0 left-0 w-64 h-full bg-pink-50 shadow-2xl z-50 p-6 flex flex-col"
+              className="fixed top-0 left-0 w-64 h-full bg-gradient-to-b from-rose-50 to-pink-100 shadow-2xl z-50 p-6 flex flex-col"
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
-              transition={{ type: "spring", stiffness: 280, damping: 25 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 25 }}
             >
+              {/* Header */}
               <div className="flex justify-between items-center mb-8">
-                <h2 className="font-semibold text-lg text-gray-800">Navigator</h2>
+                <h2 className="font-semibold text-lg text-rose-900">Navigator</h2>
                 <button
                   onClick={() => setOpen(false)}
-                  className="text-gray-500 hover:text-gray-800"
+                  aria-label="Close menu"
+                  className="text-rose-700 hover:text-rose-900"
                 >
                   ✕
                 </button>
               </div>
 
-              <nav className="space-y-3">
+              {/* Navigation Links */}
+              <nav className="space-y-2">
                 {links.map((item) => (
                   <Link
                     key={item.href}
-                    href={item.href as unknown as URL} // 👈 fix: safely cast to URL-like type
+                    href={item.href}
                     onClick={() => setOpen(false)}
-                    className="block py-2 px-3 rounded-lg text-gray-700 hover:bg-pink-100"
+                    className="block py-2 px-3 rounded-lg text-rose-900 hover:bg-white/70 hover:text-rose-800 transition"
                   >
                     {item.name}
                   </Link>
                 ))}
               </nav>
+
+              {/* Footer spacing for iOS safe area */}
+              <div className="mt-auto pt-6 text-xs text-rose-700 opacity-60">
+                Hot Princess Arc © {new Date().getFullYear()}
+              </div>
             </motion.div>
           </>
         )}
@@ -76,3 +85,4 @@ export default function NavigatorDrawer() {
     </>
   );
 }
+
