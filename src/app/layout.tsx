@@ -5,7 +5,7 @@ import Header from "@/components/Header"; // new client header
 export const metadata = {
   title: "Hot Princess Arc",
   description: "Private cycle wellness app",
-};
+}; 
 
 export default function RootLayout({
   children,
@@ -23,3 +23,4 @@ export default function RootLayout({
     </html>
   );
 }
+
