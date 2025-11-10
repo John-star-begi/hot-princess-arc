@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { TodayBanner } from "@/components/TodayBanner";
 import MonthCalendar from "@/components/MonthCalendar";
 import TodayModal from "@/components/TodayModal";
+import JournalModal from "@/components/JournalModal"; // ✅ added import
 import { Charts } from "@/components/Charts";
 import { cycleDay, phaseForDay } from "@/lib/phase";
 
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [settings, setSettings] = useState<{ start_date: string; cycle_length: number } | null>(null);
   const [todayOpen, setTodayOpen] = useState(false);
+  const [journalOpen, setJournalOpen] = useState(false); // ✅ new state
   const [todayPhase, setTodayPhase] = useState<PhaseKey | "unknown">("unknown");
 
   useEffect(() => {
@@ -85,10 +87,10 @@ export default function Dashboard() {
           </div>
         </button>
 
-        {/* Log Journal */}
-        <a
-          href="/journal"
-          className="block w-full text-left rounded-[24px] p-5 bg-gradient-to-r from-[#FFEDE4] to-[#FFF9F3] shadow-[0_6px_24px_rgba(255,180,170,0.25)] hover:brightness-105 active:scale-[.99] transition"
+        {/* Log Journal — opens modal now */}
+        <button
+          onClick={() => setJournalOpen(true)}
+          className="w-full text-left rounded-[24px] p-5 bg-gradient-to-r from-[#FFEDE4] to-[#FFF9F3] shadow-[0_6px_24px_rgba(255,180,170,0.25)] hover:brightness-105 active:scale-[.99] transition"
         >
           <div className="flex items-center gap-4">
             <span className="text-xl">🪞</span>
@@ -101,7 +103,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        </a>
+        </button>
       </motion.section>
 
       {/* 🌸 Calendar Section */}
@@ -156,6 +158,7 @@ export default function Dashboard() {
 
       {/* Modals */}
       {todayOpen && <TodayModal onClose={() => setTodayOpen(false)} />}
+      {journalOpen && <JournalModal onClose={() => setJournalOpen(false)} />} {/* ✅ Added */}
     </div>
   );
 }
