@@ -37,7 +37,7 @@ export default function JournalByDate() {
   async function save() {
     try {
       const user = await getUser();
-      const { message } = await saveJournal(user.id, date, form, userSettings);
+    const { message } = await saveJournal(user.id, date, form, userSettings ?? undefined);
       setMessage(message);
     } catch {
       setMessage('Error saving entry ❌');
@@ -54,3 +54,4 @@ export default function JournalByDate() {
     </div>
   );
 }
+
