@@ -46,7 +46,7 @@ export default function NavigatorDrawer() {
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 25 }}
+              transition={{ type: "spring", stiffness: 260, damping: 25 }}
             >
               {/* Header */}
               <div className="flex justify-between items-center mb-8">
@@ -65,7 +65,7 @@ export default function NavigatorDrawer() {
                 {links.map((item) => (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={item.href as unknown as URL} // ✅ type-safe fix for Next.js strict typing
                     onClick={() => setOpen(false)}
                     className="block py-2 px-3 rounded-lg text-rose-900 hover:bg-white/70 hover:text-rose-800 transition"
                   >
@@ -85,4 +85,3 @@ export default function NavigatorDrawer() {
     </>
   );
 }
-
