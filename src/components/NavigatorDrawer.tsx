@@ -7,13 +7,6 @@ import { MoreHorizontal } from "lucide-react";
 export default function NavigatorDrawer() {
   const [open, setOpen] = useState(false);
 
-  const links = [
-    { name: "Dashboard", href: "/dashboard" },
-    { name: "Phase Guide", href: "/phase/menstrual" },
-    { name: "Journal", href: "/journal" },
-    { name: "Settings", href: "/settings" },
-  ];
-
   return (
     <div className="relative">
       {/* Small circular menu button */}
@@ -44,6 +37,7 @@ export default function NavigatorDrawer() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
             >
+              {/* Menu header */}
               <div className="flex items-center justify-between px-4 py-2 border-b border-rose-100">
                 <h3 className="text-rose-800 font-semibold">Navigator</h3>
                 <button
@@ -55,17 +49,55 @@ export default function NavigatorDrawer() {
                 </button>
               </div>
 
+              {/* Nav links */}
               <nav className="flex flex-col p-2">
-                {links.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
-                  >
-                    {link.name}
-                  </Link>
-                ))}
+                <Link
+                  href="/dashboard"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
+                >
+                  Dashboard
+                </Link>
+
+                <Link
+                  href="/phase/overview"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
+                >
+                  Phase Overview
+                </Link>
+
+                <Link
+                  href="/nutrition"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
+                >
+                  Nutrition
+                </Link>
+
+                <Link
+                  href="/movement"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
+                >
+                  Movement
+                </Link>
+
+                <Link
+                  href="/journal"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
+                >
+                  Journal
+                </Link>
+
+                <Link
+                  href="/settings"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-100 text-left transition"
+                >
+                  Settings
+                </Link>
               </nav>
             </motion.div>
           </>
