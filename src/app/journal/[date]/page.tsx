@@ -1,57 +1,111 @@
 'use client';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { getUser, loadUserSettings, loadJournal, saveJournal, JournalForm } from '@/lib/journal';
+import { getUser, loadJournal } from '@/lib/journal';
 
 export default function JournalByDate() {
   const { date } = useParams<{ date: string }>();
-  const [form, setForm] = useState<JournalForm>({
-    mood: 5, energy: 5, stress: 5, warmth: 5, bloating: '', notes: '', photo_url: '',
-  });
-  const [message, setMessage] = useState('');
-  const [userSettings, setUserSettings] = useState<{ start_date: string; cycle_length: number } | null>(null);
+  const [entry, setEntry] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
         const user = await getUser();
-        const settings = await loadUserSettings(user.id);
-        if (settings) setUserSettings(settings);
-
         const existing = await loadJournal(user.id, date);
-        if (existing) setForm({
-          mood: existing.mood ?? 5,
-          energy: existing.energy ?? 5,
-          stress: existing.stress ?? 5,
-          warmth: existing.warmth ?? 5,
-          bloating: existing.bloating ?? '',
-          notes: existing.notes ?? '',
-          photo_url: existing.photo_url ?? '',
-        });
+        setEntry(existing);
+        setLoading(false);
       } catch {
         window.location.href = '/login';
       }
     })();
   }, [date]);
 
-  async function save() {
-    try {
-      const user = await getUser();
-    const { message } = await saveJournal(user.id, date, form, userSettings ?? undefined);
-      setMessage(message);
-    } catch {
-      setMessage('Error saving entry ❌');
-    }
-  }
+  if (loading)
+    return (
+      <div className="text-center text-rose-700/70 mt-20 animate-pulse">
+        Loading your reflection…
+      </div>
+    );
+
+  if (!entry)
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
+        <div className="rounded-3xl bg-white/40 backdrop-blur-xl shadow-[0_8px_30px_rgba(255,180,170,0.25)] p-8 space-y-4 max-w-md">
+          <h1 className="font-serif italic text-rose-900 text-xl">Journal — {date}</h1>
+          <p className="text-rose-700/70 italic">
+            No reflections logged for this day 💭
+          </p>
+        </div>
+        <a
+          href="/dashboard"
+          className="mt-6 text-sm text-rose-700/80 hover:text-rose-900 underline"
+        >
+          ← Back to Dashboard
+        </a>
+      </div>
+    );
 
   return (
-    <div className="max-w-md mx-auto p-4 grid gap-4">
-      <h1 className="text-xl font-semibold text-center mb-2">Journal — {date}</h1>
-      {/* ...your form JSX stays identical... */}
-      <button onClick={save} className="bg-princess-peach text-white px-3 py-2 rounded hover:bg-pink-400 transition">Save</button>
-      {message && <p className="text-center">{message}</p>}
-      <a className="underline text-sm mt-4 text-center" href="/dashboard">← Back to Dashboard</a>
+    <div className="flex flex-col items-center justify-start min-h-[80vh] px-4 py-10">
+      <div className="rounded-3xl bg-white/50 backdrop-blur-xl shadow-[0_8px_30px_rgba(255,180,170,0.25)] p-6 space-y-4 max-w-md w-full">
+        <h1 className="text-center font-serif italic text-rose-900 text-xl mb-3">
+          {new Date(date).toLocaleDateString('en-AU', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          })}
+        </h1>
+
+        <div className="grid gap-2 text-rose-800">
+          <div className="flex justify-between">
+            <span className="font-medium">Mood</span>
+            <span>{entry.mood ?? '—'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="font-medium">Energy</span>
+            <span>{entry.energy ?? '—'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="font-medium">Stress</span>
+            <span>{entry.stress ?? '—'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="font-medium">Warmth</span>
+            <span>{entry.warmth ?? '—'}</span>
+          </div>
+          {entry.bloating && (
+            <div className="flex justify-between">
+              <span className="font-medium">Bloating</span>
+              <span>{entry.bloating}</span>
+            </div>
+          )}
+        </div>
+
+        {entry.notes && (
+          <div className="pt-3 border-t border-rose-100 mt-2">
+            <p className="italic text-rose-700/80">“{entry.notes}”</p>
+          </div>
+        )}
+
+        {entry.photo_url && (
+          <div className="pt-3">
+            <img
+              src={entry.photo_url}
+              alt="Journal photo"
+              className="rounded-2xl shadow-md w-full object-cover"
+            />
+          </div>
+        )}
+      </div>
+
+      <a
+        href="/dashboard"
+        className="mt-6 text-sm text-rose-700/80 hover:text-rose-900 underline"
+      >
+        ← Back to Dashboard
+      </a>
     </div>
   );
 }
-
