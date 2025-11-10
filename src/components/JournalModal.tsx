@@ -49,7 +49,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
   async function handleSave() {
     try {
       const user = await getUser();
-      const { message } = await saveJournal(user.id, today, form, userSettings);
+     const { message } = await saveJournal(user.id, today, form, userSettings ?? undefined);
       setMessage(message);
       setIsAlreadyLogged(true);
     } catch {
