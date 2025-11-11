@@ -137,30 +137,25 @@ export function Charts() {
         .eq('user_id', user.id)
         .order('date', { ascending: true });
 
-      if (s) {
-        setSettings({ start_date: s.start_date, cycle_length: Number(s.cycle_length) });
-      } else {
-        setSettings(null);
-      }
+      if (s) setSettings({ start_date: s.start_date, cycle_length: Number(s.cycle_length) });
 
-      // ✅ Safe cast for Vercel build
       const jRows: unknown = j;
       const arr = Array.isArray(jRows) ? jRows : [];
-      const normalized: JournalRow[] = arr.map((r: any) => ({
+      const normalized: JournalRow[] = arr.map((r: Record<string, any>) => ({
         date: String(r.date ?? ''),
         phase: (r.phase ?? null) as PhaseKey | null,
-        energy_level: (r.energy_level ?? null) as number | null,
-        mood_stability: (r.mood_stability ?? null) as number | null,
-        hands_feet_warmth: (r.hands_feet_warmth ?? null) as number | null,
-        temp_morning_c: (r.temp_morning_c ?? null) as number | null,
-        temp_evening_c: (r.temp_evening_c ?? null) as number | null,
-        fell_asleep_easily: (r.fell_asleep_easily ?? null) as boolean | null,
-        night_wakings: (r.night_wakings ?? null) as number | null,
-        felt_energized: (r.felt_energized ?? null) as boolean | null,
-        appetite: (r.appetite ?? null) as 'low' | 'normal' | 'strong' | null,
-        bloating2: (r.bloating2 ?? null) as 'none' | 'mild' | 'severe' | null,
-        post_meal: (r.post_meal ?? null) as 'sleepy' | 'stable' | 'energized' | null,
-        notes: (r.notes ?? null) as string | null,
+        energy_level: r.energy_level ?? null,
+        mood_stability: r.mood_stability ?? null,
+        hands_feet_warmth: r.hands_feet_warmth ?? null,
+        temp_morning_c: r.temp_morning_c ?? null,
+        temp_evening_c: r.temp_evening_c ?? null,
+        fell_asleep_easily: r.fell_asleep_easily ?? null,
+        night_wakings: r.night_wakings ?? null,
+        felt_energized: r.felt_energized ?? null,
+        appetite: r.appetite ?? null,
+        bloating2: r.bloating2 ?? null,
+        post_meal: r.post_meal ?? null,
+        notes: r.notes ?? null,
       }));
 
       setRows(normalized);
@@ -168,7 +163,7 @@ export function Charts() {
     })();
   }, []);
 
-  /* ---------- Chart Calculations ---------- */
+  /* ---------- Derived Data ---------- */
 
   const basePoints = useMemo(() => {
     if (!settings) return [];
@@ -277,6 +272,7 @@ export function Charts() {
 
   return (
     <div className="w-full">
+      {/* Toggle Bar */}
       <div className="flex flex-wrap gap-2 mb-3">
         <ToggleButton label="Energy & Mood" active={view === 'energy_mood'} onClick={() => setView('energy_mood')} />
         <ToggleButton label="Temperature" active={view === 'temperature'} onClick={() => setView('temperature')} />
@@ -285,6 +281,7 @@ export function Charts() {
         <ToggleButton label="Cycle Trends" active={view === 'phase_trends'} onClick={() => setView('phase_trends')} />
       </div>
 
+      {/* Chart */}
       <AnimatePresence mode="wait">
         <motion.div
           key={view}
@@ -294,9 +291,77 @@ export function Charts() {
           transition={{ duration: 0.35, ease: 'easeInOut' }}
           className="relative h-[260px] w-full overflow-hidden"
         >
-          <ResponsiveContainer>
-            {/* render the proper chart based on selected view */}
-            {/* (chart code from previous version remains unchanged here for brevity) */}
+          <ResponsiveContainer width="100%" height="100%">
+            {view === 'energy_mood' && (
+              <LineChart data={energyMoodData}>
+                <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
+                <XAxis dataKey="cycleDay" domain={[1, settings.cycle_length]} />
+                <YAxis domain={[0, 5]} />
+                <Tooltip />
+                {bandsEM.bands.map((b) => (
+                  <ReferenceArea key={b.phase} x1={b.start} x2={b.end} y1={0} y2={5} fillOpacity={0.08} />
+                ))}
+                <Line dataKey="energy" stroke={COLORS.energy} strokeWidth={2.5} dot={false} />
+                <Line dataKey="mood" stroke={COLORS.mood} strokeWidth={2.5} dot={false} />
+              </LineChart>
+            )}
+
+            {view === 'temperature' && (
+              <LineChart data={temperatureData}>
+                <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
+                <XAxis dataKey="cycleDay" domain={[1, settings.cycle_length]} />
+                <YAxis domain={[0, 40]} />
+                <Tooltip />
+                {bandsTempWarm.bands.map((b) => (
+                  <ReferenceArea key={b.phase} x1={b.start} x2={b.end} y1={0} y2={40} fillOpacity={0.08} />
+                ))}
+                <Line dataKey="morning" stroke={COLORS.morning} strokeWidth={2.5} dot={false} />
+                <Line dataKey="evening" stroke={COLORS.evening} strokeWidth={2.5} dot={false} />
+                <Line dataKey="warmth" stroke={COLORS.warmth} strokeWidth={2.5} dot={false} />
+              </LineChart>
+            )}
+
+            {view === 'sleep' && (
+              <LineChart data={sleepData}>
+                <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
+                <XAxis dataKey="cycleDay" domain={[1, settings.cycle_length]} />
+                <YAxis domain={[0, 3]} />
+                <Tooltip />
+                {bandsSleep.bands.map((b) => (
+                  <ReferenceArea key={b.phase} x1={b.start} x2={b.end} y1={0} y2={3} fillOpacity={0.08} />
+                ))}
+                <Line dataKey="asleepEasy" stroke={COLORS.asleepEasy} strokeWidth={2.5} dot={false} />
+                <Line dataKey="nightWakings" stroke={COLORS.nightWakings} strokeWidth={2.5} dot={false} />
+                <Line dataKey="energized" stroke={COLORS.energized} strokeWidth={2.5} dot={false} />
+              </LineChart>
+            )}
+
+            {view === 'digestion' && (
+              <BarChart data={digestionData}>
+                <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
+                <XAxis dataKey="cycleDay" domain={[1, settings.cycle_length]} />
+                <YAxis domain={[0, 3]} />
+                <Tooltip />
+                {bandsDig.bands.map((b) => (
+                  <ReferenceArea key={b.phase} x1={b.start} x2={b.end} y1={0} y2={3} fillOpacity={0.08} />
+                ))}
+                <Bar dataKey="appetiteScore" fill={COLORS.appetite} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="bloatingScore" fill={COLORS.bloating} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="postMealScore" fill={COLORS.postMeal} radius={[6, 6, 0, 0]} />
+              </BarChart>
+            )}
+
+            {view === 'phase_trends' && (
+              <LineChart data={phaseAverages}>
+                <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
+                <XAxis dataKey="phase" />
+                <YAxis domain={[0, 5]} />
+                <Tooltip />
+                <Line dataKey="energy" stroke={COLORS.energy} strokeWidth={2.5} dot />
+                <Line dataKey="mood" stroke={COLORS.mood} strokeWidth={2.5} dot />
+                <Line dataKey="warmth" stroke={COLORS.warmth} strokeWidth={2.5} dot />
+              </LineChart>
+            )}
           </ResponsiveContainer>
         </motion.div>
       </AnimatePresence>
