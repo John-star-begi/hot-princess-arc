@@ -55,20 +55,31 @@ const COLORS = {
   postMeal: '#A2D7D1',
 };
 
+// Safe phase function
+function safePhaseForDay(day: number, length: number): PhaseKey {
+  try {
+    const p = phaseForDay(day, length);
+    if (p === 'menstrual' || p === 'follicular' || p === 'ovulation' || p === 'luteal') return p;
+    return 'menstrual';
+  } catch {
+    return 'menstrual';
+  }
+}
+
 function phaseBands(cycleLength: number) {
-  if (!cycleLength || cycleLength < 5) return [];
+  const len = Math.max(21, Math.min(40, Number(cycleLength) || 28));
   const bands: { phase: PhaseKey; start: number; end: number }[] = [];
-  let cur = phaseForDay(1, cycleLength) as PhaseKey;
+  let cur = safePhaseForDay(1, len);
   let start = 1;
-  for (let d = 2; d <= cycleLength; d++) {
-    const p = phaseForDay(d, cycleLength) as PhaseKey;
+  for (let d = 2; d <= len; d++) {
+    const p = safePhaseForDay(d, len);
     if (p !== cur) {
       bands.push({ phase: cur, start, end: d - 1 });
       cur = p;
       start = d;
     }
   }
-  bands.push({ phase: cur, start, end: cycleLength });
+  bands.push({ phase: cur, start, end: len });
   return bands;
 }
 
@@ -116,7 +127,11 @@ export function Charts() {
         .eq('user_id', user.id)
         .order('date', { ascending: true });
 
-      setSettings(s ? { start_date: s.start_date, cycle_length: Number(s.cycle_length) } : null);
+      setSettings(
+        s && s.start_date
+          ? { start_date: s.start_date, cycle_length: Number(s.cycle_length) || 28 }
+          : null
+      );
       setRows(Array.isArray(j) ? (j as JournalRow[]) : []);
       setLoading(false);
     })();
@@ -126,32 +141,41 @@ export function Charts() {
   if (!settings) return <p className="text-gray-600">Add your cycle settings to begin.</p>;
   if (!rows.length) return <p className="text-gray-600">No journal data yet.</p>;
 
-  const startD = new Date(settings.start_date);
+  const safeCycleLength = Math.max(21, Math.min(40, Number(settings.cycle_length) || 28));
+  let startD: Date;
+  try {
+    startD = new Date(settings.start_date);
+    if (isNaN(startD.getTime())) throw new Error();
+  } catch {
+    return <p className="text-gray-600">Invalid start date.</p>;
+  }
 
   const allPoints = useMemo(() => {
-    if (!rows.length) return [];
     return rows.map((r) => {
       const d = new Date(r.date);
-      const cd = cycleDay(d, startD, settings.cycle_length);
-      const phase = (r.phase ?? (phaseForDay(cd, settings.cycle_length) as PhaseKey)) as PhaseKey;
+      const cd = cycleDay(d, startD, safeCycleLength);
+      const phase = (r.phase ?? safePhaseForDay(cd, safeCycleLength)) as PhaseKey;
       return { ...r, cycleDay: cd, phase };
     });
-  }, [rows, startD, settings.cycle_length]);
+  }, [rows, startD, safeCycleLength]);
 
   const maxDay = allPoints.length ? Math.max(...allPoints.map((r) => r.cycleDay)) : 1;
-  const cyclesCount = Math.max(1, Math.ceil(maxDay / settings.cycle_length));
+  const cyclesCount = Math.max(1, Math.ceil(maxDay / safeCycleLength));
   const filteredPoints =
     scope === 'current'
-      ? allPoints.filter((r) => r.cycleDay > (cyclesCount - 1) * settings.cycle_length)
+      ? allPoints.filter((r) => r.cycleDay > (cyclesCount - 1) * safeCycleLength)
       : allPoints;
 
-  const bands = phaseBands(settings.cycle_length);
+  const bands = phaseBands(safeCycleLength);
 
-  // Simple builder with phase bands
-  const makeLineChart = (data: any[], lines: { key: string; color: string }[], yDomain: [number, number]) => (
+  const makeLineChart = (
+    data: any[],
+    lines: { key: string; color: string }[],
+    yDomain: [number, number]
+  ) => (
     <LineChart data={data.length ? data : [{ cycleDay: 0 }]}>
       <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
-      <XAxis dataKey="cycleDay" domain={[1, settings.cycle_length]} />
+      <XAxis dataKey="cycleDay" domain={[1, safeCycleLength]} />
       <YAxis domain={yDomain} />
       <Tooltip />
       {bands.map((b) => (
@@ -171,12 +195,16 @@ export function Charts() {
     </LineChart>
   );
 
-  // Chart content selection
+  /* ---------- Chart selection ---------- */
   let chartContent = <div />;
   switch (view) {
     case 'energy_mood':
       chartContent = makeLineChart(
-        filteredPoints.map((r) => ({ cycleDay: r.cycleDay, energy: r.energy_level, mood: r.mood_stability })),
+        filteredPoints.map((r) => ({
+          cycleDay: r.cycleDay,
+          energy: r.energy_level,
+          mood: r.mood_stability,
+        })),
         [
           { key: 'energy', color: COLORS.energy },
           { key: 'mood', color: COLORS.mood },
@@ -184,6 +212,7 @@ export function Charts() {
         [0, 5]
       );
       break;
+
     case 'temperature':
       chartContent = makeLineChart(
         filteredPoints.map((r) => ({
@@ -200,6 +229,7 @@ export function Charts() {
         [0, 40]
       );
       break;
+
     case 'sleep':
       chartContent = makeLineChart(
         filteredPoints.map((r) => ({
@@ -216,14 +246,21 @@ export function Charts() {
         [0, 3]
       );
       break;
+
     case 'digestion':
       chartContent = (
-        <BarChart data={filteredPoints.map((r) => ({
-          cycleDay: r.cycleDay,
-          appetiteScore: appetiteScore(r.appetite),
-          bloatingScore: bloatingScore(r.bloating2),
-          postMealScore: postMealScore(r.post_meal),
-        }))}>
+        <BarChart
+          data={
+            filteredPoints.length
+              ? filteredPoints.map((r) => ({
+                  cycleDay: r.cycleDay,
+                  appetiteScore: appetiteScore(r.appetite),
+                  bloatingScore: bloatingScore(r.bloating2),
+                  postMealScore: postMealScore(r.post_meal),
+                }))
+              : [{ cycleDay: 0 }]
+          }
+        >
           <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
           <XAxis dataKey="cycleDay" />
           <YAxis domain={[0, 3]} />
@@ -234,14 +271,25 @@ export function Charts() {
         </BarChart>
       );
       break;
-    default:
-      chartContent = <div />;
+
+    case 'phase_trends':
+      chartContent = (
+        <LineChart data={bands.map((b) => ({ phase: b.phase, energy: 3, mood: 3, warmth: 3 }))}>
+          <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
+          <XAxis dataKey="phase" />
+          <YAxis domain={[0, 5]} />
+          <Tooltip />
+          <Line type="monotone" dataKey="energy" stroke={COLORS.energy} strokeWidth={2.5} dot />
+          <Line type="monotone" dataKey="mood" stroke={COLORS.mood} strokeWidth={2.5} dot />
+          <Line type="monotone" dataKey="warmth" stroke={COLORS.warmth} strokeWidth={2.5} dot />
+        </LineChart>
+      );
+      break;
   }
 
   /* ---------- Render ---------- */
   return (
     <div className="w-full">
-      {/* Buttons + Scope Toggle */}
       <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
         <div className="flex flex-wrap gap-2">
           {(['energy_mood', 'temperature', 'sleep', 'digestion', 'phase_trends'] as ViewKey[]).map((k) => (
