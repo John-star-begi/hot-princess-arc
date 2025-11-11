@@ -21,7 +21,7 @@ export default function NavigatorDrawer() {
             onClick={() => setOpen(false)}
           />
 
-          {/* Completely solid panel */}
+          {/* Solid drawer panel */}
           <motion.div
             className="fixed top-0 left-0 h-full w-[80%] max-w-xs z-[99999] shadow-2xl border-r border-rose-100 flex flex-col"
             style={{
@@ -45,12 +45,53 @@ export default function NavigatorDrawer() {
             </div>
 
             <nav className="flex flex-col space-y-4 px-6 pb-6 text-rose-900">
-              <Link href={"/dashboard" as Route} onClick={() => setOpen(false)} className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition">Dashboard</Link>
-              <Link href={"/phase/overview" as Route} onClick={() => setOpen(false)} className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition">Phase Overview</Link>
-              <Link href={"/nutrition" as Route} onClick={() => setOpen(false)} className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition">Nutrition</Link>
-              <Link href={"/movement" as Route} onClick={() => setOpen(false)} className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition">Movement</Link>
-              <Link href={"/journal" as Route} onClick={() => setOpen(false)} className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition">Journal</Link>
-              <Link href={"/settings" as Route} onClick={() => setOpen(false)} className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition">Settings</Link>
+              <Link
+                href={"/dashboard" as Route}
+                onClick={() => setOpen(false)}
+                className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition"
+              >
+                Dashboard
+              </Link>
+
+              <Link
+                href={"/phase-overview" as Route}
+                onClick={() => setOpen(false)}
+                className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition"
+              >
+                Phase Overview
+              </Link>
+
+              <Link
+                href={"/nutrition" as Route}
+                onClick={() => setOpen(false)}
+                className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition"
+              >
+                Nutrition
+              </Link>
+
+              <Link
+                href={"/movement" as Route}
+                onClick={() => setOpen(false)}
+                className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition"
+              >
+                Movement
+              </Link>
+
+              <Link
+                href={"/journal" as Route}
+                onClick={() => setOpen(false)}
+                className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition"
+              >
+                Journal
+              </Link>
+
+              <Link
+                href={"/settings" as Route}
+                onClick={() => setOpen(false)}
+                className="text-lg hover:bg-rose-200/40 px-2 py-2 rounded-md transition"
+              >
+                Settings
+              </Link>
             </nav>
           </motion.div>
         </>
@@ -60,7 +101,7 @@ export default function NavigatorDrawer() {
 
   return (
     <>
-      {/* Button always visible */}
+      {/* Menu button (always visible) */}
       <div className="relative z-[10000]">
         <button
           aria-label="Open navigation menu"
@@ -80,7 +121,7 @@ export default function NavigatorDrawer() {
         </button>
       </div>
 
-      {/* Portal renders outside header so no transparency bleed */}
+      {/* Render drawer in portal */}
       {typeof window !== "undefined" && createPortal(DrawerContent, document.body)}
     </>
   );
