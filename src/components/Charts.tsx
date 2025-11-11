@@ -27,17 +27,14 @@ type Settings = { start_date: string; cycle_length: number };
 type JournalRow = {
   date: string;
   phase: PhaseKey | null;
-
   energy_level: number | null;
   mood_stability: number | null;
   hands_feet_warmth: number | null;
   temp_morning_c: number | null;
   temp_evening_c: number | null;
-
   fell_asleep_easily: boolean | null;
   night_wakings: number | null;
   felt_energized: boolean | null;
-
   appetite: 'low' | 'normal' | 'strong' | null;
   bloating2: 'none' | 'mild' | 'severe' | null;
   post_meal: 'sleepy' | 'stable' | 'energized' | null;
@@ -59,6 +56,7 @@ const COLORS = {
 };
 
 function phaseBands(cycleLength: number) {
+  if (!cycleLength || cycleLength < 5) return [];
   const bands: { phase: PhaseKey; start: number; end: number }[] = [];
   let cur = phaseForDay(1, cycleLength) as PhaseKey;
   let start = 1;
@@ -93,9 +91,7 @@ export function Charts() {
 
   useEffect(() => {
     (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } = { user: null } } = await supabase.auth.getUser();
       if (!user) {
         window.location.href = '/login';
         return;
@@ -128,13 +124,12 @@ export function Charts() {
 
   if (loading) return <p>Loading charts…</p>;
   if (!settings) return <p className="text-gray-600">Add your cycle settings to begin.</p>;
-  if (rows.length === 0) return <p className="text-gray-600">No journal data yet.</p>;
+  if (!rows.length) return <p className="text-gray-600">No journal data yet.</p>;
 
-  /* ---------- Data Prep ---------- */
   const startD = new Date(settings.start_date);
 
-  // Map rows to include cycleDay and resolved phase
   const allPoints = useMemo(() => {
+    if (!rows.length) return [];
     return rows.map((r) => {
       const d = new Date(r.date);
       const cd = cycleDay(d, startD, settings.cycle_length);
@@ -143,154 +138,45 @@ export function Charts() {
     });
   }, [rows, startD, settings.cycle_length]);
 
-  // Compute current-cycle window
-  const maxDay = useMemo(
-    () => Math.max(...allPoints.map((r) => r.cycleDay)),
-    [allPoints]
-  );
+  const maxDay = allPoints.length ? Math.max(...allPoints.map((r) => r.cycleDay)) : 1;
   const cyclesCount = Math.max(1, Math.ceil(maxDay / settings.cycle_length));
-  const filteredPoints = useMemo(
-    () =>
-      scope === 'current'
-        ? allPoints.filter((r) => r.cycleDay > (cyclesCount - 1) * settings.cycle_length)
-        : allPoints,
-    [allPoints, scope, cyclesCount, settings.cycle_length]
-  );
+  const filteredPoints =
+    scope === 'current'
+      ? allPoints.filter((r) => r.cycleDay > (cyclesCount - 1) * settings.cycle_length)
+      : allPoints;
 
-  const bands = useMemo(() => phaseBands(settings.cycle_length), [settings.cycle_length]);
+  const bands = phaseBands(settings.cycle_length);
 
-  // Build helper: a line chart with phase bands
-  const makeLineChart = (
-    data: any[],
-    lines: { key: string; color: string }[],
-    yDomain: [number, number]
-  ) => (
-    <LineChart data={data} margin={{ top: 16, right: 10, bottom: 8, left: 0 }}>
+  // Simple builder with phase bands
+  const makeLineChart = (data: any[], lines: { key: string; color: string }[], yDomain: [number, number]) => (
+    <LineChart data={data.length ? data : [{ cycleDay: 0 }]}>
       <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
-      <XAxis
-        dataKey="cycleDay"
-        type="number"
-        domain={[1, settings.cycle_length]}
-        tickFormatter={(v: number) => `Day ${v}`}
-        tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }}
-      />
-      <YAxis domain={yDomain} tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }} />
-      <Tooltip
-        contentStyle={{
-          borderRadius: 12,
-          border: '1px solid rgba(255,255,255,0.6)',
-          background: 'rgba(255,249,243,0.95)',
-          boxShadow: '0 8px 24px rgba(255,180,170,0.25)',
-        }}
-      />
+      <XAxis dataKey="cycleDay" domain={[1, settings.cycle_length]} />
+      <YAxis domain={yDomain} />
+      <Tooltip />
       {bands.map((b) => (
         <ReferenceArea
-          key={`${b.phase}-${b.start}-${b.end}`}
+          key={`${b.phase}-${b.start}`}
           x1={b.start}
           x2={b.end}
           y1={0}
           y2={yDomain[1]}
           fill={(phasePalette as Record<string, string>)[b.phase] || '#eee'}
           fillOpacity={0.08}
-          ifOverflow="extendDomain"
         />
       ))}
       {lines.map((l) => (
-        <Line key={l.key} type="monotone" dataKey={l.key} stroke={l.color} strokeWidth={2.4} dot={false} />
+        <Line key={l.key} dataKey={l.key} stroke={l.color} strokeWidth={2.5} dot={false} />
       ))}
     </LineChart>
   );
 
-  // Prepare data series for each view
-  const energyMoodData = useMemo(
-    () =>
-      filteredPoints.map((r) => ({
-        cycleDay: r.cycleDay,
-        energy: r.energy_level ?? 0,
-        mood: r.mood_stability ?? 0,
-      })),
-    [filteredPoints]
-  );
-
-  const temperatureData = useMemo(
-    () =>
-      filteredPoints.map((r) => ({
-        cycleDay: r.cycleDay,
-        morning: Number(r.temp_morning_c ?? 0),
-        evening: Number(r.temp_evening_c ?? 0),
-        warmth: r.hands_feet_warmth ?? 0,
-      })),
-    [filteredPoints]
-  );
-
-  const sleepData = useMemo(
-    () =>
-      filteredPoints.map((r) => ({
-        cycleDay: r.cycleDay,
-        asleepEasy: r.fell_asleep_easily ? 1 : 0,
-        nightWakings: r.night_wakings ?? 0,
-        energized: r.felt_energized ? 1 : 0,
-      })),
-    [filteredPoints]
-  );
-
-  const digestionData = useMemo(
-    () =>
-      filteredPoints.map((r) => ({
-        cycleDay: r.cycleDay,
-        appetiteScore: appetiteScore(r.appetite),
-        bloatingScore: bloatingScore(r.bloating2),
-        postMealScore: postMealScore(r.post_meal),
-      })),
-    [filteredPoints]
-  );
-
-  // Phase averages (used by phase_trends)
-  const phaseAverages = useMemo(() => {
-    const acc: Record<
-      PhaseKey,
-      { energy: number; mood: number; warmth: number; morning: number; evening: number; count: number }
-    > = {
-      menstrual: { energy: 0, mood: 0, warmth: 0, morning: 0, evening: 0, count: 0 },
-      follicular: { energy: 0, mood: 0, warmth: 0, morning: 0, evening: 0, count: 0 },
-      ovulation: { energy: 0, mood: 0, warmth: 0, morning: 0, evening: 0, count: 0 },
-      luteal: { energy: 0, mood: 0, warmth: 0, morning: 0, evening: 0, count: 0 },
-    };
-
-    filteredPoints.forEach((r) => {
-      const ph = r.phase as PhaseKey;
-      acc[ph].energy += r.energy_level ?? 0;
-      acc[ph].mood += r.mood_stability ?? 0;
-      acc[ph].warmth += r.hands_feet_warmth ?? 0;
-      acc[ph].morning += Number(r.temp_morning_c ?? 0);
-      acc[ph].evening += Number(r.temp_evening_c ?? 0);
-      acc[ph].count += 1;
-    });
-
-    const out = (Object.keys(acc) as PhaseKey[]).map((k) => {
-      const v = acc[k];
-      const c = Math.max(1, v.count);
-      return {
-        phase: k,
-        energy: +(v.energy / c).toFixed(1),
-        mood: +(v.mood / c).toFixed(1),
-        warmth: +(v.warmth / c).toFixed(1),
-        morning: +(v.morning / c).toFixed(1),
-        evening: +(v.evening / c).toFixed(1),
-      };
-    });
-
-    const order: PhaseKey[] = ['menstrual', 'follicular', 'ovulation', 'luteal'];
-    out.sort((a, b) => order.indexOf(a.phase) - order.indexOf(b.phase));
-    return out;
-  }, [filteredPoints]);
-
-  // Select chart content (always a single React child)
+  // Chart content selection
   let chartContent = <div />;
   switch (view) {
     case 'energy_mood':
       chartContent = makeLineChart(
-        energyMoodData,
+        filteredPoints.map((r) => ({ cycleDay: r.cycleDay, energy: r.energy_level, mood: r.mood_stability })),
         [
           { key: 'energy', color: COLORS.energy },
           { key: 'mood', color: COLORS.mood },
@@ -300,7 +186,12 @@ export function Charts() {
       break;
     case 'temperature':
       chartContent = makeLineChart(
-        temperatureData,
+        filteredPoints.map((r) => ({
+          cycleDay: r.cycleDay,
+          morning: r.temp_morning_c,
+          evening: r.temp_evening_c,
+          warmth: r.hands_feet_warmth,
+        })),
         [
           { key: 'morning', color: COLORS.morning },
           { key: 'evening', color: COLORS.evening },
@@ -311,7 +202,12 @@ export function Charts() {
       break;
     case 'sleep':
       chartContent = makeLineChart(
-        sleepData,
+        filteredPoints.map((r) => ({
+          cycleDay: r.cycleDay,
+          asleepEasy: r.fell_asleep_easily ? 1 : 0,
+          nightWakings: r.night_wakings ?? 0,
+          energized: r.felt_energized ? 1 : 0,
+        })),
         [
           { key: 'asleepEasy', color: COLORS.asleepEasy },
           { key: 'nightWakings', color: COLORS.nightWakings },
@@ -322,60 +218,20 @@ export function Charts() {
       break;
     case 'digestion':
       chartContent = (
-        <BarChart data={digestionData} margin={{ top: 16, right: 10, bottom: 8, left: 0 }}>
+        <BarChart data={filteredPoints.map((r) => ({
+          cycleDay: r.cycleDay,
+          appetiteScore: appetiteScore(r.appetite),
+          bloatingScore: bloatingScore(r.bloating2),
+          postMealScore: postMealScore(r.post_meal),
+        }))}>
           <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
-          <XAxis
-            dataKey="cycleDay"
-            type="number"
-            domain={[1, settings.cycle_length]}
-            tickFormatter={(v: number) => `Day ${v}`}
-            tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }}
-          />
-          <YAxis domain={[0, 3]} tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }} />
-          <Tooltip
-            contentStyle={{
-              borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.6)',
-              background: 'rgba(255,249,243,0.95)',
-              boxShadow: '0 8px 24px rgba(255,180,170,0.25)',
-            }}
-          />
-          {bands.map((b) => (
-            <ReferenceArea
-              key={`${b.phase}-${b.start}-${b.end}`}
-              x1={b.start}
-              x2={b.end}
-              y1={0}
-              y2={3}
-              fill={(phasePalette as Record<string, string>)[b.phase] || '#eee'}
-              fillOpacity={0.08}
-              ifOverflow="extendDomain"
-            />
-          ))}
-          <Bar dataKey="appetiteScore" fill={COLORS.appetite} radius={[6, 6, 0, 0]} />
-          <Bar dataKey="bloatingScore" fill={COLORS.bloating} radius={[6, 6, 0, 0]} />
-          <Bar dataKey="postMealScore" fill={COLORS.postMeal} radius={[6, 6, 0, 0]} />
+          <XAxis dataKey="cycleDay" />
+          <YAxis domain={[0, 3]} />
+          <Tooltip />
+          <Bar dataKey="appetiteScore" fill={COLORS.appetite} />
+          <Bar dataKey="bloatingScore" fill={COLORS.bloating} />
+          <Bar dataKey="postMealScore" fill={COLORS.postMeal} />
         </BarChart>
-      );
-      break;
-    case 'phase_trends':
-      chartContent = (
-        <LineChart data={phaseAverages} margin={{ top: 16, right: 10, bottom: 8, left: 0 }}>
-          <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
-          <XAxis dataKey="phase" type="category" tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }} />
-          <YAxis domain={[0, 5]} tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }} />
-          <Tooltip
-            contentStyle={{
-              borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.6)',
-              background: 'rgba(255,249,243,0.95)',
-              boxShadow: '0 8px 24px rgba(255,180,170,0.25)',
-            }}
-          />
-          <Line type="monotone" dataKey="energy" stroke={COLORS.energy} strokeWidth={2.6} dot />
-          <Line type="monotone" dataKey="mood" stroke={COLORS.mood} strokeWidth={2.6} dot />
-          <Line type="monotone" dataKey="warmth" stroke={COLORS.warmth} strokeWidth={2.6} dot />
-        </LineChart>
       );
       break;
     default:
@@ -385,7 +241,7 @@ export function Charts() {
   /* ---------- Render ---------- */
   return (
     <div className="w-full">
-      {/* Top controls: view buttons + cycle toggle */}
+      {/* Buttons + Scope Toggle */}
       <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
         <div className="flex flex-wrap gap-2">
           {(['energy_mood', 'temperature', 'sleep', 'digestion', 'phase_trends'] as ViewKey[]).map((k) => (
@@ -393,7 +249,9 @@ export function Charts() {
               key={k}
               onClick={() => setView(k)}
               className={`px-3 py-1.5 rounded-full text-sm ${
-                view === k ? 'bg-[#FFD7C8] text-rose-900 shadow' : 'bg-[#FFF3EB] text-rose-800 hover:brightness-105'
+                view === k
+                  ? 'bg-[#FFD7C8] text-rose-900 shadow'
+                  : 'bg-[#FFF3EB] text-rose-800 hover:brightness-105'
               }`}
             >
               {k.replace('_', ' ')}
@@ -401,7 +259,6 @@ export function Charts() {
           ))}
         </div>
 
-        {/* 🌗 Cycle scope toggle – right side */}
         <div
           onClick={() => setScope(scope === 'current' ? 'all' : 'current')}
           className="relative flex items-center w-[140px] h-7 rounded-full bg-[#FFEAE3] cursor-pointer shadow-sm select-none"
@@ -420,7 +277,6 @@ export function Charts() {
         </div>
       </div>
 
-      {/* Chart */}
       <motion.div
         key={`${view}-${scope}`}
         initial={{ opacity: 0 }}
