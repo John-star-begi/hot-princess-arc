@@ -83,9 +83,7 @@ const FlowCard: React.FC<
     <div className="h-[2px] w-28 bg-gradient-to-r from-[#FFE3D8] via-[#FFE083] to-[#FFE3D8] rounded-full" />
     {mantra ? (
       <div className="rounded-2xl bg-[#FFEAE3]/70 text-[#6E4E46] italic text-center p-4 shadow-inner">
-        <p className="font-[var(--font-playfair,ui-serif)] text-[16px]">
-          Mantra: {mantra}
-        </p>
+        <p className="font-[var(--font-playfair,ui-serif)] text-[16px]">Mantra: {mantra}</p>
       </div>
     ) : null}
     {children}
@@ -128,7 +126,7 @@ const Bullet: React.FC<React.PropsWithChildren<{ icon?: string }>> = ({ icon = "
   </li>
 );
 
-// Soft list table
+// Two column soft table
 const SoftTable: React.FC<{
   headers: [string, string];
   rows: Array<[string, string, string?]>;
@@ -163,10 +161,10 @@ const SoftTable: React.FC<{
   </div>
 );
 
-// Three column table variant
+// Three column soft table
 const SoftTable3: React.FC<{
   headers: [string, string, string];
-  rows: Array<[string, string, string, string?]>;
+  rows: Array<[string, string, string]>;
 }> = ({ headers, rows }) => (
   <div className="overflow-hidden rounded-2xl border border-rose-100/60 bg-white/60">
     <div className="grid grid-cols-3 gap-px bg-white/20">
@@ -187,10 +185,7 @@ const SoftTable3: React.FC<{
             i % 2 === 0 ? "bg-[#FFF9F3]/80" : "bg-[#FFEAE3]/80"
           }`}
         >
-          <div className="p-3 text-[15px] text-[#5B3B34]">
-            {r[3] ? <span className="mr-2">{r[3]}</span> : null}
-            {r[0]}
-          </div>
+          <div className="p-3 text-[15px] text-[#5B3B34]">{r[0]}</div>
           <div className="p-3 text-[15px] text-[#5B3B34]">{r[1]}</div>
           <div className="p-3 text-[15px] text-[#5B3B34]">{r[2]}</div>
         </div>
@@ -199,30 +194,64 @@ const SoftTable3: React.FC<{
   </div>
 );
 
-// Phase chip
-const PhaseChip: React.FC<React.PropsWithChildren<{ from: string; to: string; title: string; emoji: string }>> = ({
-  from,
-  to,
-  title,
-  emoji,
-  children,
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: "-80px" }}
-    transition={{ duration: 0.5 }}
-    className="rounded-3xl p-5 shadow-lg shadow-rose-100/40"
-    style={{ backgroundImage: `linear-gradient(135deg, ${from}, ${to})` }}
-  >
-    <div className="mb-2 font-[var(--font-playfair,ui-serif)] italic text-[18px] text-[#6B4A44]">
-      {emoji} {title}
+// Cycle table with phase tints per row
+const CycleTable: React.FC = () => {
+  const rows = [
+    {
+      phase: "🩸 Menstrual (Days 1 to 5)",
+      tone: "linear-gradient(135deg,#FAD1D1,#FFF6F1)",
+      mood: "Energy dips and cooler body. Circulation and release.",
+      moves: "Gentle walking, stretching, soft Pilates",
+    },
+    {
+      phase: "🌱 Follicular (Days 6 to 13)",
+      tone: "linear-gradient(135deg,#DFF5E9,#FFFDF6)",
+      mood: "Energy lifting. Building strength base.",
+      moves: "Pilates, light weights, mobility",
+    },
+    {
+      phase: "🌕 Ovulation (Days 14 to 17)",
+      tone: "linear-gradient(135deg,#FFE6A8,#FFD9C1)",
+      mood: "Strong and radiant. Shaping and expression.",
+      moves: "Strength sessions, glute focus, posture work",
+    },
+    {
+      phase: "🌙 Luteal (Days 18 to 28)",
+      tone: "linear-gradient(135deg,#E9E0FF,#FFE4EE)",
+      mood: "Warm with slower recovery. Grounding and calming.",
+      moves: "Yoga, reformer Pilates, walking",
+    },
+  ];
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-rose-100/60">
+      <div className="grid grid-cols-3 bg-white/60">
+        {["Phase", "Body tone and focus", "Best movements"].map((h, i) => (
+          <div
+            key={i}
+            className="p-3 text-[16px] font-[var(--font-playfair,ui-serif)] italic text-[#A96A61]"
+          >
+            {h}
+          </div>
+        ))}
+      </div>
+
+      <div>
+        {rows.map((r, i) => (
+          <div
+            key={i}
+            className="grid grid-cols-3 border-t border-white/40"
+            style={{ backgroundImage: r.tone, backgroundColor: "rgba(255,255,255,0.5)" }}
+          >
+            <div className="p-3 text-[15px] text-[#6B4A44]">{r.phase}</div>
+            <div className="p-3 text-[15px] text-[#5B3B34]">{r.mood}</div>
+            <div className="p-3 text-[15px] text-[#5B3B34]">{r.moves}</div>
+          </div>
+        ))}
+      </div>
     </div>
-    <div className="rounded-2xl bg-white/60 p-4 text-[#5B3B34] font-[var(--font-poppins,ui-sans-serif)] leading-8">
-      {children}
-    </div>
-  </motion.div>
-);
+  );
+};
 
 // Scroll to top
 const ScrollTop: React.FC = () => {
@@ -310,31 +339,8 @@ export default function MovementPage() {
 
         {/* III */}
         <FlowCard indexLabel="III." title="Movement Through the Cycle">
-          <SoftTable3
-            headers={["Phase", "Body tone and focus", "Best movements"]}
-            rows={[
-              ["Menstrual, Days one to five", "Energy dips and cooler body, focus on circulation and release", "Gentle walking, stretching, soft Pilates", "🩸"],
-              ["Follicular, Days six to thirteen", "Energy lifting, build strength base", "Pilates, light weights, mobility", "🌱"],
-              ["Ovulation, Days fourteen to seventeen", "Strong and radiant, shaping and expression", "Strength sessions, glute work, posture", "🌕"],
-              ["Luteal, Days eighteen to twenty eight", "Warm with slower recovery, grounding and calming", "Yoga, reformer Pilates, walking", "🌙"],
-            ]}
-          />
+          <CycleTable />
           <p className="mt-3">The body rhythm is cyclical. Movement that honors it enhances hormone harmony and beauty at once.</p>
-          {/* Pastel phase chips */}
-          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <PhaseChip from="#FAD1D1" to="#FFF6F1" title="Menstrual" emoji="🩸">
-              Blush to cream tint. Move softly and allow release.
-            </PhaseChip>
-            <PhaseChip from="#DFF5E9" to="#FFFDF6" title="Follicular" emoji="🌱">
-              Mint to cream tint. Build foundation and coordination.
-            </PhaseChip>
-            <PhaseChip from="#FFE6A8" to="#FFD9C1" title="Ovulation" emoji="🌕">
-              Gold to peach tint. Express strength with softness.
-            </PhaseChip>
-            <PhaseChip from="#E9E0FF" to="#FFE4EE" title="Luteal" emoji="🌙">
-              Lavender to rose tint. Ground and restore.
-            </PhaseChip>
-          </div>
         </FlowCard>
 
         {/* IV */}
@@ -396,10 +402,10 @@ export default function MovementPage() {
           <SoftTable3
             headers={["Time", "Practice", "Purpose"]}
             rows={[
-              ["Morning", "Ten to fifteen minutes walk or mobility", "Awakens thyroid and natural cortisol rhythm", "🌞"],
-              ["After meals", "Ten minutes slow walk", "Supports digestion and glucose balance", "🚶‍♀️"],
-              ["Work hours", "Stretch or stand every forty five minutes", "Keeps circulation and posture open", "⌛"],
-              ["Evening", "Light stretching or lymph brushing", "Reduces water retention and prepares for sleep", "🕯️"],
+              ["Morning", "Ten to fifteen minutes walk or mobility", "Awakens thyroid and natural cortisol rhythm"],
+              ["After meals", "Ten minutes slow walk", "Supports digestion and glucose balance"],
+              ["Work hours", "Stretch or stand every forty five minutes", "Keeps circulation and posture open"],
+              ["Evening", "Light stretching or lymph brushing", "Reduces water retention and prepares for sleep"],
             ]}
           />
           <p className="mt-3">Think of this as metabolic housekeeping. Small acts keep energy moving without stress.</p>
@@ -421,11 +427,11 @@ export default function MovementPage() {
           <SoftTable3
             headers={["Sign", "Likely cause", "Correction"]}
             rows={[
-              ["Cold or shaky after training", "Glycogen depletion", "Sugar and salt drink immediately", "❗"],
-              ["Dizziness", "Low blood sugar", "Eat fruit or honey before moving", "🌀"],
-              ["Cramps", "Low magnesium or hydration", "Add magnesium, salt, and water", "💧"],
-              ["Soreness beyond forty eight hours", "Overload or poor recovery fuel", "Eat sugar and protein and rest fully", "⏳"],
-              ["PMS worsens", "Too much cortisol", "Switch to walks or gentle Pilates and raise carbs", "⚠️"],
+              ["Cold or shaky after training", "Glycogen depletion", "Sugar and salt drink immediately"],
+              ["Dizziness", "Low blood sugar", "Eat fruit or honey before moving"],
+              ["Cramps", "Low magnesium or hydration", "Add magnesium, salt, and water"],
+              ["Soreness beyond forty eight hours", "Overload or poor recovery fuel", "Eat sugar and protein and rest fully"],
+              ["PMS worsens", "Too much cortisol", "Switch to walks or gentle Pilates and raise carbs"],
             ]}
           />
           <p className="mt-3">Your body whispers before it shouts. Listening early prevents hormonal backlash later.</p>
@@ -523,9 +529,7 @@ export default function MovementPage() {
         <FlowCard indexLabel="XVI." title="Emergency Reset">
           <div className="rounded-3xl bg-gradient-to-br from-[#FFF5F3] to-[#FFD7C8] p-6 text-center">
             <div className="mb-2 text-2xl">🕯️</div>
-            <p className="text-[15.5px] text-[#5B3B34]">
-              If you feel cold or anxious or fatigued, pause.
-            </p>
+            <p className="text-[15.5px] text-[#5B3B34]">If you feel cold or anxious or fatigued, pause.</p>
             <ul className="mt-3 space-y-2 text-[#5B3B34]">
               <li>• For forty eight hours</li>
               <li>• Skip all strenuous training</li>
