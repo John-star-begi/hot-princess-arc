@@ -242,40 +242,42 @@ export function Charts() {
       chartContent = <div />;
   }
 
-  /* ---------- Render ---------- */
-  return (
-    <div className="w-full">
-      {/* Top toggles */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        {(['energy_mood', 'temperature', 'sleep', 'digestion', 'phase_trends'] as ViewKey[]).map((k) => (
-          <button
-            key={k}
-            onClick={() => setView(k)}
-            className={`px-3 py-1.5 rounded-full text-sm ${
-              view === k ? 'bg-[#FFD7C8] text-rose-900 shadow' : 'bg-[#FFF3EB] text-rose-800 hover:brightness-105'
-            }`}
-          >
-            {k.replace('_', ' ')}
-          </button>
-        ))}
-        {/* 🌗 Cycle scope toggle – top right */}
-<div
-  onClick={() => setScope(scope === 'current' ? 'all' : 'current')}
-  className="ml-auto relative flex items-center w-[140px] h-7 rounded-full bg-[#FFEAE3] cursor-pointer shadow-sm select-none"
->
-  <motion.div
-    layout
-    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-    className={`absolute top-1 left-1 h-5 w-[65px] rounded-full shadow-sm ${
-      scope === 'current' ? 'bg-[#FFD7C8]' : 'translate-x-[70px] bg-[#FFD7C8]'
-    }`}
-  />
-  <div className="flex justify-between w-full text-[12px] font-medium text-rose-900 z-10 px-3">
-    <span className={`${scope === 'current' ? 'opacity-100' : 'opacity-60'}`}>Current</span>
-    <span className={`${scope === 'all' ? 'opacity-100' : 'opacity-60'}`}>All</span>
+  {/* Top controls: view buttons + cycle toggle */}
+<div className="flex flex-wrap items-center justify-between mb-3 gap-2">
+  <div className="flex flex-wrap gap-2">
+    {(['energy_mood', 'temperature', 'sleep', 'digestion', 'phase_trends'] as ViewKey[]).map((k) => (
+      <button
+        key={k}
+        onClick={() => setView(k)}
+        className={`px-3 py-1.5 rounded-full text-sm ${
+          view === k
+            ? 'bg-[#FFD7C8] text-rose-900 shadow'
+            : 'bg-[#FFF3EB] text-rose-800 hover:brightness-105'
+        }`}
+      >
+        {k.replace('_', ' ')}
+      </button>
+    ))}
+  </div>
+
+  {/* 🌗 Cycle scope toggle – right side */}
+  <div
+    onClick={() => setScope(scope === 'current' ? 'all' : 'current')}
+    className="relative flex items-center w-[140px] h-7 rounded-full bg-[#FFEAE3] cursor-pointer shadow-sm select-none"
+  >
+    <motion.div
+      layout
+      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      className={`absolute top-1 left-1 h-5 w-[65px] rounded-full shadow-sm ${
+        scope === 'current' ? 'bg-[#FFD7C8]' : 'translate-x-[70px] bg-[#FFD7C8]'
+      }`}
+    />
+    <div className="flex justify-between w-full text-[12px] font-medium text-rose-900 z-10 px-3">
+      <span className={`${scope === 'current' ? 'opacity-100' : 'opacity-60'}`}>Current</span>
+      <span className={`${scope === 'all' ? 'opacity-100' : 'opacity-60'}`}>All</span>
+    </div>
   </div>
 </div>
-
 
       {/* Chart */}
       <motion.div
@@ -292,4 +294,5 @@ export function Charts() {
     </div>
   );
 }
+
 
