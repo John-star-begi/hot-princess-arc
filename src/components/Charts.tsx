@@ -30,17 +30,22 @@ type Settings = {
 type JournalRow = {
   date: string;
   phase: PhaseKey | null;
-  energy_level: number | null;
-  mood_stability: number | null;
-  hands_feet_warmth: number | null;
+
+  energy_level: number | null;      // 1-5
+  mood_stability: number | null;    // 1-5
+
+  hands_feet_warmth: number | null; // 1-5
   temp_morning_c: number | null;
   temp_evening_c: number | null;
+
   fell_asleep_easily: boolean | null;
-  night_wakings: number | null;
+  night_wakings: number | null;     // 0-3
   felt_energized: boolean | null;
+
   appetite: 'low' | 'normal' | 'strong' | null;
   bloating2: 'none' | 'mild' | 'severe' | null;
   post_meal: 'sleepy' | 'stable' | 'energized' | null;
+
   notes?: string | null;
 };
 
@@ -67,7 +72,7 @@ const COLORS: Record<string, string> = {
   postMeal: '#A2D7D1',
 };
 
-function phaseBands(cycleLength: number, yMax: number) {
+function phaseBands(cycleLength: number) {
   const bands: { phase: PhaseKey; start: number; end: number }[] = [];
   let currentPhase = phaseForDay(1, cycleLength) as PhaseKey;
   let start = 1;
@@ -80,7 +85,7 @@ function phaseBands(cycleLength: number, yMax: number) {
     }
   }
   bands.push({ phase: currentPhase, start, end: cycleLength });
-  return { bands, yMax };
+  return bands;
 }
 
 function appetiteToScore(a: JournalRow['appetite']): number {
@@ -107,7 +112,7 @@ function postMealToScore(p: JournalRow['post_meal']): number {
 export function Charts() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [rows, setRows] = useState<JournalRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [view, setView] = useState<ViewKey>('energy_mood');
 
   useEffect(() => {
@@ -137,25 +142,30 @@ export function Charts() {
         .eq('user_id', user.id)
         .order('date', { ascending: true });
 
-      if (s) setSettings({ start_date: s.start_date, cycle_length: Number(s.cycle_length) });
+      if (s) {
+        setSettings({ start_date: s.start_date, cycle_length: Number(s.cycle_length) });
+      } else {
+        setSettings(null);
+      }
 
+      // Safe normalization for Vercel / strict TS
       const jRows: unknown = j;
       const arr = Array.isArray(jRows) ? jRows : [];
-      const normalized: JournalRow[] = arr.map((r: Record<string, any>) => ({
+      const normalized: JournalRow[] = arr.map((r: Record<string, unknown>) => ({
         date: String(r.date ?? ''),
         phase: (r.phase ?? null) as PhaseKey | null,
-        energy_level: r.energy_level ?? null,
-        mood_stability: r.mood_stability ?? null,
-        hands_feet_warmth: r.hands_feet_warmth ?? null,
-        temp_morning_c: r.temp_morning_c ?? null,
-        temp_evening_c: r.temp_evening_c ?? null,
-        fell_asleep_easily: r.fell_asleep_easily ?? null,
-        night_wakings: r.night_wakings ?? null,
-        felt_energized: r.felt_energized ?? null,
-        appetite: r.appetite ?? null,
-        bloating2: r.bloating2 ?? null,
-        post_meal: r.post_meal ?? null,
-        notes: r.notes ?? null,
+        energy_level: (r.energy_level ?? null) as number | null,
+        mood_stability: (r.mood_stability ?? null) as number | null,
+        hands_feet_warmth: (r.hands_feet_warmth ?? null) as number | null,
+        temp_morning_c: (r.temp_morning_c ?? null) as number | null,
+        temp_evening_c: (r.temp_evening_c ?? null) as number | null,
+        fell_asleep_easily: (r.fell_asleep_easily ?? null) as boolean | null,
+        night_wakings: (r.night_wakings ?? null) as number | null,
+        felt_energized: (r.felt_energized ?? null) as boolean | null,
+        appetite: (r.appetite ?? null) as 'low' | 'normal' | 'strong' | null,
+        bloating2: (r.bloating2 ?? null) as 'none' | 'mild' | 'severe' | null,
+        post_meal: (r.post_meal ?? null) as 'sleepy' | 'stable' | 'energized' | null,
+        notes: (r.notes ?? null) as string | null,
       }));
 
       setRows(normalized);
@@ -163,79 +173,72 @@ export function Charts() {
     })();
   }, []);
 
-  /* ---------- Derived Data ---------- */
+  /* ---------- Derived data ---------- */
 
-  const basePoints = useMemo(() => {
+  const basePoints = useMemo<ChartPointBase[]>(() => {
     if (!settings) return [];
     const startD = new Date(settings.start_date);
     return rows.map((r) => {
-      const cd = cycleDay(new Date(r.date), startD, settings.cycle_length);
+      const d = new Date(r.date);
+      const cd = cycleDay(d, startD, settings.cycle_length);
       const phase = (r.phase ?? (phaseForDay(cd, settings.cycle_length) as PhaseKey)) as PhaseKey;
       return { date: r.date, cycleDay: cd, phase };
     });
   }, [rows, settings]);
 
-  const energyMoodData = useMemo(
-    () =>
-      basePoints.map((bp, i) => ({
-        ...bp,
-        energy: rows[i]?.energy_level ?? 0,
-        mood: rows[i]?.mood_stability ?? 0,
-      })),
-    [basePoints, rows]
-  );
+  const energyMoodData = useMemo<EnergyMoodPoint[]>(() => {
+    return basePoints.map((bp, i) => ({
+      ...bp,
+      energy: rows[i]?.energy_level ?? 0,
+      mood: rows[i]?.mood_stability ?? 0,
+    }));
+  }, [basePoints, rows]);
 
-  const temperatureData = useMemo(
-    () =>
-      basePoints.map((bp, i) => ({
-        ...bp,
-        morning: Number(rows[i]?.temp_morning_c ?? 0),
-        evening: Number(rows[i]?.temp_evening_c ?? 0),
-        warmth: rows[i]?.hands_feet_warmth ?? 0,
-      })),
-    [basePoints, rows]
-  );
+  const temperatureData = useMemo<TemperaturePoint[]>(() => {
+    return basePoints.map((bp, i) => ({
+      ...bp,
+      morning: Number(rows[i]?.temp_morning_c ?? 0),
+      evening: Number(rows[i]?.temp_evening_c ?? 0),
+      warmth: rows[i]?.hands_feet_warmth ?? 0,
+    }));
+  }, [basePoints, rows]);
 
-  const sleepData = useMemo(
-    () =>
-      basePoints.map((bp, i) => ({
-        ...bp,
-        asleepEasy: rows[i]?.fell_asleep_easily ? 1 : 0,
-        nightWakings: rows[i]?.night_wakings ?? 0,
-        energized: rows[i]?.felt_energized ? 1 : 0,
-      })),
-    [basePoints, rows]
-  );
+  const sleepData = useMemo<SleepPoint[]>(() => {
+    return basePoints.map((bp, i) => ({
+      ...bp,
+      asleepEasy: rows[i]?.fell_asleep_easily ? 1 : 0,
+      nightWakings: rows[i]?.night_wakings ?? 0,
+      energized: rows[i]?.felt_energized ? 1 : 0,
+    }));
+  }, [basePoints, rows]);
 
-  const digestionData = useMemo(
-    () =>
-      basePoints.map((bp, i) => ({
-        ...bp,
-        appetiteScore: appetiteToScore(rows[i]?.appetite ?? null),
-        bloatingScore: bloatingToScore(rows[i]?.bloating2 ?? null),
-        postMealScore: postMealToScore(rows[i]?.post_meal ?? null),
-      })),
-    [basePoints, rows]
-  );
+  const digestionData = useMemo<DigestionPoint[]>(() => {
+    return basePoints.map((bp, i) => ({
+      ...bp,
+      appetiteScore: appetiteToScore(rows[i]?.appetite ?? null),
+      bloatingScore: bloatingToScore(rows[i]?.bloating2 ?? null),
+      postMealScore: postMealToScore(rows[i]?.post_meal ?? null),
+    }));
+  }, [basePoints, rows]);
 
-  const phaseAverages = useMemo(() => {
-    const acc: Record<PhaseKey, any> = {
+  const phaseAverages = useMemo<PhaseAverages[]>(() => {
+    const acc: Record<PhaseKey, { energy: number; mood: number; warmth: number; morning: number; evening: number; count: number }> = {
       menstrual: { energy: 0, mood: 0, warmth: 0, morning: 0, evening: 0, count: 0 },
       follicular: { energy: 0, mood: 0, warmth: 0, morning: 0, evening: 0, count: 0 },
-      ovulation: { energy: 0, mood: 0, warmth: 0, morning: 0, evening: 0, count: 0 },
-      luteal: { energy: 0, mood: 0, warmth: 0, morning: 0, evening: 0, count: 0 },
+      ovulation:  { energy: 0, mood: 0, warmth: 0, morning: 0, evening: 0, count: 0 },
+      luteal:     { energy: 0, mood: 0, warmth: 0, morning: 0, evening: 0, count: 0 },
     };
     temperatureData.forEach((p, idx) => {
       const ph = p.phase;
       const r = rows[idx];
-      acc[ph].energy += r?.energy_level ?? 0;
-      acc[ph].mood += r?.mood_stability ?? 0;
-      acc[ph].warmth += r?.hands_feet_warmth ?? 0;
+      acc[ph].energy  += r?.energy_level ?? 0;
+      acc[ph].mood    += r?.mood_stability ?? 0;
+      acc[ph].warmth  += r?.hands_feet_warmth ?? 0;
       acc[ph].morning += Number(r?.temp_morning_c ?? 0);
       acc[ph].evening += Number(r?.temp_evening_c ?? 0);
-      acc[ph].count++;
+      acc[ph].count  += 1;
     });
-    return (Object.keys(acc) as PhaseKey[]).map((k) => {
+    const result = (Object.keys(acc) as PhaseKey[]).map((k) => {
       const v = acc[k];
       const c = Math.max(1, v.count);
       return {
@@ -247,6 +250,9 @@ export function Charts() {
         evening: +(v.evening / c).toFixed(1),
       };
     });
+    const order: PhaseKey[] = ['menstrual', 'follicular', 'ovulation', 'luteal'];
+    result.sort((a, b) => order.indexOf(a.phase) - order.indexOf(b.phase));
+    return result;
   }, [temperatureData, rows]);
 
   /* ---------- UI ---------- */
@@ -265,10 +271,190 @@ export function Charts() {
     </button>
   );
 
-  const bandsEM = phaseBands(settings.cycle_length, 5);
-  const bandsTempWarm = phaseBands(settings.cycle_length, 40);
-  const bandsSleep = phaseBands(settings.cycle_length, 3);
-  const bandsDig = phaseBands(settings.cycle_length, 3);
+  const bands = phaseBands(settings.cycle_length);
+
+  // Build a single child element for ResponsiveContainer (fixes “multiple children” error)
+  const chartContent = (() => {
+    switch (view) {
+      case 'energy_mood':
+        return (
+          <LineChart data={energyMoodData} margin={{ top: 16, right: 10, bottom: 8, left: 0 }}>
+            <CartesianGrid vertical={false} stroke="rgba(125, 85, 80, 0.08)" />
+            <XAxis
+              dataKey="cycleDay"
+              type="number"
+              domain={[1, settings.cycle_length]}
+              tickFormatter={(v: number) => `Day ${v}`}
+              tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }}
+            />
+            <YAxis domain={[0, 5]} tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }} />
+            <Tooltip
+              contentStyle={{
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.6)',
+                background: 'rgba(255,249,243,0.95)',
+                boxShadow: '0 8px 24px rgba(255,180,170,0.25)',
+              }}
+            />
+            {bands.map((b) => (
+              <ReferenceArea
+                key={`${b.phase}-${b.start}-${b.end}`}
+                x1={b.start}
+                x2={b.end}
+                y1={0}
+                y2={5}
+                fill={(phasePalette as Record<string, string>)[b.phase] || '#eee'}
+                fillOpacity={0.08}
+                ifOverflow="extendDomain"
+              />
+            ))}
+            <Line type="monotone" dataKey="energy" stroke={COLORS.energy} strokeWidth={2.6} dot={false} />
+            <Line type="monotone" dataKey="mood" stroke={COLORS.mood} strokeWidth={2.6} dot={false} />
+          </LineChart>
+        );
+
+      case 'temperature':
+        return (
+          <LineChart data={temperatureData} margin={{ top: 16, right: 10, bottom: 8, left: 0 }}>
+            <CartesianGrid vertical={false} stroke="rgba(125, 85, 80, 0.08)" />
+            <XAxis
+              dataKey="cycleDay"
+              type="number"
+              domain={[1, settings.cycle_length]}
+              tickFormatter={(v: number) => `Day ${v}`}
+              tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }}
+            />
+            <YAxis domain={[0, 40]} tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }} />
+            <Tooltip
+              contentStyle={{
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.6)',
+                background: 'rgba(255,249,243,0.95)',
+                boxShadow: '0 8px 24px rgba(255,180,170,0.25)',
+              }}
+            />
+            {bands.map((b) => (
+              <ReferenceArea
+                key={`${b.phase}-${b.start}-${b.end}`}
+                x1={b.start}
+                x2={b.end}
+                y1={0}
+                y2={40}
+                fill={(phasePalette as Record<string, string>)[b.phase] || '#eee'}
+                fillOpacity={0.08}
+                ifOverflow="extendDomain"
+              />
+            ))}
+            <Line type="monotone" dataKey="morning" stroke={COLORS.morning} strokeWidth={2.6} dot={false} />
+            <Line type="monotone" dataKey="evening" stroke={COLORS.evening} strokeWidth={2.6} dot={false} />
+            <Line type="monotone" dataKey="warmth" stroke={COLORS.warmth} strokeWidth={2.4} dot={false} />
+          </LineChart>
+        );
+
+      case 'sleep':
+        return (
+          <LineChart data={sleepData} margin={{ top: 16, right: 10, bottom: 8, left: 0 }}>
+            <CartesianGrid vertical={false} stroke="rgba(125, 85, 80, 0.08)" />
+            <XAxis
+              dataKey="cycleDay"
+              type="number"
+              domain={[1, settings.cycle_length]}
+              tickFormatter={(v: number) => `Day ${v}`}
+              tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }}
+            />
+            <YAxis domain={[0, 3]} tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }} />
+            <Tooltip
+              contentStyle={{
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.6)',
+                background: 'rgba(255,249,243,0.95)',
+                boxShadow: '0 8px 24px rgba(255,180,170,0.25)',
+              }}
+            />
+            {bands.map((b) => (
+              <ReferenceArea
+                key={`${b.phase}-${b.start}-${b.end}`}
+                x1={b.start}
+                x2={b.end}
+                y1={0}
+                y2={3}
+                fill={(phasePalette as Record<string, string>)[b.phase] || '#eee'}
+                fillOpacity={0.08}
+                ifOverflow="extendDomain"
+              />
+            ))}
+            <Line type="monotone" dataKey="asleepEasy" stroke={COLORS.asleepEasy} strokeWidth={2.6} dot={false} />
+            <Line type="monotone" dataKey="nightWakings" stroke={COLORS.nightWakings} strokeWidth={2.6} dot={false} />
+            <Line type="monotone" dataKey="energized" stroke={COLORS.energized} strokeWidth={2.6} dot={false} />
+          </LineChart>
+        );
+
+      case 'digestion':
+        return (
+          <BarChart data={digestionData} margin={{ top: 16, right: 10, bottom: 8, left: 0 }}>
+            <CartesianGrid vertical={false} stroke="rgba(125, 85, 80, 0.08)" />
+            <XAxis
+              dataKey="cycleDay"
+              type="number"
+              domain={[1, settings.cycle_length]}
+              tickFormatter={(v: number) => `Day ${v}`}
+              tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }}
+            />
+            <YAxis domain={[0, 3]} tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }} />
+            <Tooltip
+              contentStyle={{
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.6)',
+                background: 'rgba(255,249,243,0.95)',
+                boxShadow: '0 8px 24px rgba(255,180,170,0.25)',
+              }}
+            />
+            {bands.map((b) => (
+              <ReferenceArea
+                key={`${b.phase}-${b.start}-${b.end}`}
+                x1={b.start}
+                x2={b.end}
+                y1={0}
+                y2={3}
+                fill={(phasePalette as Record<string, string>)[b.phase] || '#eee'}
+                fillOpacity={0.08}
+                ifOverflow="extendDomain"
+              />
+            ))}
+            <Bar dataKey="appetiteScore" fill={COLORS.appetite} radius={[6, 6, 0, 0]} />
+            <Bar dataKey="bloatingScore" fill={COLORS.bloating} radius={[6, 6, 0, 0]} />
+            <Bar dataKey="postMealScore" fill={COLORS.postMeal} radius={[6, 6, 0, 0]} />
+          </BarChart>
+        );
+
+      case 'phase_trends':
+        return (
+          <LineChart data={phaseAverages} margin={{ top: 16, right: 10, bottom: 8, left: 0 }}>
+            <CartesianGrid vertical={false} stroke="rgba(125, 85, 80, 0.08)" />
+            <XAxis
+              dataKey="phase"
+              type="category"
+              tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }}
+            />
+            <YAxis domain={[0, 5]} tick={{ fill: 'rgba(110,78,70,0.6)', fontSize: 12 }} />
+            <Tooltip
+              contentStyle={{
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.6)',
+                background: 'rgba(255,249,243,0.95)',
+                boxShadow: '0 8px 24px rgba(255,180,170,0.25)',
+              }}
+            />
+            <Line type="monotone" dataKey="energy" stroke={COLORS.energy} strokeWidth={2.6} dot />
+            <Line type="monotone" dataKey="mood" stroke={COLORS.mood} strokeWidth={2.6} dot />
+            <Line type="monotone" dataKey="warmth" stroke={COLORS.warmth} strokeWidth={2.6} dot />
+          </LineChart>
+        );
+
+      default:
+        return null;
+    }
+  })();
 
   return (
     <div className="w-full">
@@ -281,7 +467,7 @@ export function Charts() {
         <ToggleButton label="Cycle Trends" active={view === 'phase_trends'} onClick={() => setView('phase_trends')} />
       </div>
 
-      {/* Chart */}
+      {/* Chart (single child inside ResponsiveContainer) */}
       <AnimatePresence mode="wait">
         <motion.div
           key={view}
@@ -292,76 +478,7 @@ export function Charts() {
           className="relative h-[260px] w-full overflow-hidden"
         >
           <ResponsiveContainer width="100%" height="100%">
-            {view === 'energy_mood' && (
-              <LineChart data={energyMoodData}>
-                <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
-                <XAxis dataKey="cycleDay" domain={[1, settings.cycle_length]} />
-                <YAxis domain={[0, 5]} />
-                <Tooltip />
-                {bandsEM.bands.map((b) => (
-                  <ReferenceArea key={b.phase} x1={b.start} x2={b.end} y1={0} y2={5} fillOpacity={0.08} />
-                ))}
-                <Line dataKey="energy" stroke={COLORS.energy} strokeWidth={2.5} dot={false} />
-                <Line dataKey="mood" stroke={COLORS.mood} strokeWidth={2.5} dot={false} />
-              </LineChart>
-            )}
-
-            {view === 'temperature' && (
-              <LineChart data={temperatureData}>
-                <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
-                <XAxis dataKey="cycleDay" domain={[1, settings.cycle_length]} />
-                <YAxis domain={[0, 40]} />
-                <Tooltip />
-                {bandsTempWarm.bands.map((b) => (
-                  <ReferenceArea key={b.phase} x1={b.start} x2={b.end} y1={0} y2={40} fillOpacity={0.08} />
-                ))}
-                <Line dataKey="morning" stroke={COLORS.morning} strokeWidth={2.5} dot={false} />
-                <Line dataKey="evening" stroke={COLORS.evening} strokeWidth={2.5} dot={false} />
-                <Line dataKey="warmth" stroke={COLORS.warmth} strokeWidth={2.5} dot={false} />
-              </LineChart>
-            )}
-
-            {view === 'sleep' && (
-              <LineChart data={sleepData}>
-                <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
-                <XAxis dataKey="cycleDay" domain={[1, settings.cycle_length]} />
-                <YAxis domain={[0, 3]} />
-                <Tooltip />
-                {bandsSleep.bands.map((b) => (
-                  <ReferenceArea key={b.phase} x1={b.start} x2={b.end} y1={0} y2={3} fillOpacity={0.08} />
-                ))}
-                <Line dataKey="asleepEasy" stroke={COLORS.asleepEasy} strokeWidth={2.5} dot={false} />
-                <Line dataKey="nightWakings" stroke={COLORS.nightWakings} strokeWidth={2.5} dot={false} />
-                <Line dataKey="energized" stroke={COLORS.energized} strokeWidth={2.5} dot={false} />
-              </LineChart>
-            )}
-
-            {view === 'digestion' && (
-              <BarChart data={digestionData}>
-                <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
-                <XAxis dataKey="cycleDay" domain={[1, settings.cycle_length]} />
-                <YAxis domain={[0, 3]} />
-                <Tooltip />
-                {bandsDig.bands.map((b) => (
-                  <ReferenceArea key={b.phase} x1={b.start} x2={b.end} y1={0} y2={3} fillOpacity={0.08} />
-                ))}
-                <Bar dataKey="appetiteScore" fill={COLORS.appetite} radius={[6, 6, 0, 0]} />
-                <Bar dataKey="bloatingScore" fill={COLORS.bloating} radius={[6, 6, 0, 0]} />
-                <Bar dataKey="postMealScore" fill={COLORS.postMeal} radius={[6, 6, 0, 0]} />
-              </BarChart>
-            )}
-
-            {view === 'phase_trends' && (
-              <LineChart data={phaseAverages}>
-                <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
-                <XAxis dataKey="phase" />
-                <YAxis domain={[0, 5]} />
-                <Tooltip />
-                <Line dataKey="energy" stroke={COLORS.energy} strokeWidth={2.5} dot />
-                <Line dataKey="mood" stroke={COLORS.mood} strokeWidth={2.5} dot />
-                <Line dataKey="warmth" stroke={COLORS.warmth} strokeWidth={2.5} dot />
-              </LineChart>
-            )}
+            {chartContent}
           </ResponsiveContainer>
         </motion.div>
       </AnimatePresence>
