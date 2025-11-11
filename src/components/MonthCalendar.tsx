@@ -4,6 +4,18 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cycleDay, phaseForDay, phasePalette } from "@/lib/phase";
 
+// Local date helpers to avoid UTC shifting
+function parseDateOnly(s: string): Date {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function formatDateOnly(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export default function MonthCalendar({
   startDate,
   cycleLength,
@@ -12,7 +24,7 @@ export default function MonthCalendar({
   cycleLength: number;
 }) {
   const [viewDate, setViewDate] = useState(new Date());
-  const startD = new Date(startDate);
+  const startD = parseDateOnly(startDate);
   const today = new Date();
 
   const year = viewDate.getFullYear();
@@ -61,9 +73,11 @@ export default function MonthCalendar({
 
         <div className="relative">
           <h3 className="font-serif italic text-[18px] sm:text-[20px] tracking-wide text-[#6E4E46] select-none">
-            {viewDate.toLocaleString(undefined, { month: "long", year: "numeric" })}
+            {viewDate.toLocaleString(undefined, {
+              month: "long",
+              year: "numeric",
+            })}
           </h3>
-          {/* Tiny shimmer pulse under month name */}
           <motion.div
             className="absolute left-1/2 -translate-x-1/2 top-[1.9rem] h-[2px] w-8 rounded-full bg-gradient-to-r from-rose-200 via-rose-100 to-pink-200 opacity-60"
             initial={{ opacity: 0 }}
@@ -110,7 +124,7 @@ export default function MonthCalendar({
               return (
                 <motion.a
                   key={i}
-                  href={`/journal/${d.toISOString().slice(0, 10)}`}
+                  href={`/journal/${formatDateOnly(d)}`}
                   whileTap={{ scale: 0.96 }}
                   className={`group relative flex items-center justify-center aspect-square rounded-full select-none transition-all duration-300 ${
                     isToday
@@ -124,7 +138,6 @@ export default function MonthCalendar({
                       : undefined,
                   }}
                 >
-                  {/* Today breathing animation */}
                   {isToday && (
                     <motion.div
                       className="absolute inset-0 rounded-full"
@@ -137,12 +150,10 @@ export default function MonthCalendar({
                     />
                   )}
 
-                  {/* Day number */}
                   <span className="relative z-10 text-[14px] font-medium text-[#6E4E46] drop-shadow-[0_0_1px_rgba(255,255,255,0.8)]">
                     {d.getDate()}
                   </span>
 
-                  {/* Phase dot – now solid opaque */}
                   <span
                     className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
                     style={{ backgroundColor: color, opacity: 1 }}
