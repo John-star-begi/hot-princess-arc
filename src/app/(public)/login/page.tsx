@@ -54,6 +54,8 @@ export default function Login() {
               type="password"
               autoComplete="current-password"
             />
+
+            {/* Log in button */}
             <button
               type="submit"
               disabled={loading}
@@ -62,7 +64,16 @@ export default function Login() {
               {loading ? "Logging in…" : "Log in"}
             </button>
 
-            <div className="text-center text-sm">
+            {/* Sign up button */}
+            <Link
+              href="/signup"
+              className="block h-11 rounded-2xl bg-gradient-to-r from-princess-cream to-princess-blush text-gray-800 font-medium text-center leading-[44px] shadow-sm active:scale-[.99] transition-transform"
+            >
+              Create new account
+            </Link>
+
+            {/* Forgot password link */}
+            <div className="text-center text-sm mt-1">
               <Link href="/reset-password" className="text-pink-700 underline underline-offset-2">
                 Forgot password?
               </Link>
