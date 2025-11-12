@@ -110,7 +110,7 @@ export default function NavigatorDrawer() {
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="w-5 h-5 text-rose-700"
+            className="w-8 h-8 text-rose-700"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
