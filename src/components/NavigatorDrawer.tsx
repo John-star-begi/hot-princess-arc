@@ -103,22 +103,22 @@ export default function NavigatorDrawer() {
     <>
       {/* Menu button (always visible) */}
       <div className="relative z-[10000]">
-        <button
-          aria-label="Open navigation menu"
-          onClick={() => setOpen(true)}
-          className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-rose-200 hover:bg-rose-300 border border-rose-100 shadow-sm"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-8 h-8 text-rose-700"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h12M6 6h12M6 18h12" />
-          </svg>
-        </button>
+    <button
+  aria-label="Open navigation menu"
+  onClick={() => setOpen(true)}
+  className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-rose-200 hover:bg-rose-300 border border-rose-100 shadow-sm"
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="w-7 h-7 text-rose-700"
+    fill="none"
+    viewBox="2 2 20 20"  {/* ✅ zooms in on lines */}
+    stroke="currentColor"
+    strokeWidth={2.3}
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h12M6 6h12M6 18h12" />
+  </svg>
+</button>
       </div>
 
       {/* Render drawer in portal */}
