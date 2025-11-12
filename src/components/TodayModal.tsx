@@ -1,4 +1,4 @@
-"use client";
+"use client"; 
 import { motion, AnimatePresence } from "framer-motion";
 import { useTodayPlan } from "@/hooks/useTodayPlan";
 
@@ -66,7 +66,7 @@ export default function TodayModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Content */}
-          <div className="space-y-6 pb-4">
+          <div className="space-y-6 pb-12"> {/* ✅ Increased bottom padding */}
             {/* Meals Section */}
             <section>
               <h3 className="text-lg font-[Playfair_Display] font-semibold text-rose-900 mb-3">
@@ -144,7 +144,7 @@ export default function TodayModal({ onClose }: { onClose: () => void }) {
 
           {/* Fade shadows for scrollable content */}
           <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-[#FFF9F5] to-transparent pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#FFE9E3] to-transparent pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[#FFE9E3] via-[#FFE9E3]/70 to-transparent pointer-events-none"></div> {/* ✅ Softer, blended gradient */}
         </motion.div>
       </motion.div>
     </AnimatePresence>
