@@ -42,10 +42,10 @@ export type JournalForm = {
   cramps_twitches?: boolean | null;
 
   // 🌙 Sleep
-  bedtime?: string | null; // '21:30'
-  woke?: string | null;     // '06:45'
+  bedtime?: string | null;
+  woke?: string | null;
   fell_asleep_easily?: boolean | null;
-  night_wakings?: number | null; // 0..3
+  night_wakings?: number | null;
 
   // ✍️ One-Line Reflection
   one_line_reflection?: string;
@@ -54,9 +54,9 @@ export type JournalForm = {
   // Menstrual
   m_flow?: 'light' | 'normal' | 'heavy';
   m_clotting?: 'none' | 'mild' | 'frequent';
-  m_cramps_pain?: number; // 1-5
+  m_cramps_pain?: number;
   m_energy_recovery_by_day3?: boolean | null;
-  m_mood_calmness?: number; // 1-5
+  m_mood_calmness?: number;
   m_warmth_returning?: boolean | null;
   m_digestion_improving?: boolean | null;
 
@@ -82,16 +82,22 @@ export type JournalForm = {
   l_temperature_stable?: boolean | null;
   l_mood_stability?: 'good' | 'irritable' | 'low';
   l_sleep_quality?: 'good' | 'interrupted';
-  l_cravings?: string[] | null; // ['sugar', 'fat', 'salt']
+  l_cravings?: string[] | null;
   l_pms_signs?: 'none' | 'mild' | 'strong';
   l_pre_spotting?: boolean | null;
-  l_energy?: number; // 1-5
+  l_energy?: number;
 
-  // Legacy kept for read pages if present
   notes?: string;
   photo_url?: string;
 };
 
+/* -------- Helper functions for timezone-safe date handling -------- */
+function parseDateOnly(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/* -------- Supabase functions -------- */
 export async function getUser() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not logged in');
@@ -127,8 +133,10 @@ export async function saveJournal(
 ) {
   let phase = 'unknown';
   if (userSettings) {
-    const startD = new Date(userSettings.start_date);
-    const cd = cycleDay(new Date(date), startD, userSettings.cycle_length);
+    // ✅ Fix timezone shift: parse dates as local-only
+    const startD = parseDateOnly(userSettings.start_date);
+    const currentD = parseDateOnly(date);
+    const cd = cycleDay(currentD, startD, userSettings.cycle_length);
     phase = phaseForDay(cd);
   }
 
@@ -151,4 +159,3 @@ export async function saveJournal(
 
   return { success: true, message: `Saved ✅ (Phase: ${phase})` };
 }
-
