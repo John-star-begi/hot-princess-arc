@@ -6,8 +6,23 @@ import { cycleDay, phaseForDay } from '@/lib/phase';
 
 type PhaseSlug = 'menstrual' | 'follicular' | 'ovulation' | 'luteal' | 'unknown';
 
+/* ---------- Timezone-safe date helpers ---------- */
+function formatDateOnly(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function parseDateOnly(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/* ---------- Main component ---------- */
 export default function JournalModal({ onClose }: { onClose: () => void }) {
-  const today = new Date().toISOString().slice(0, 10);
+  // ✅ Use local date instead of UTC-based toISOString
+  const today = formatDateOnly(new Date());
 
   const [form, setForm] = useState<JournalForm>({});
   const [userSettings, setUserSettings] = useState<{ start_date: string; cycle_length: number } | null>(null);
@@ -22,7 +37,12 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
         const settings = await loadUserSettings(user.id);
         if (settings) {
           setUserSettings(settings);
-          const cd = cycleDay(new Date(today), new Date(settings.start_date), settings.cycle_length);
+          // ✅ Parse as local-only dates to prevent off-by-one errors
+          const cd = cycleDay(
+            parseDateOnly(today),
+            parseDateOnly(settings.start_date),
+            settings.cycle_length
+          );
           setPhase(phaseForDay(cd) as PhaseSlug);
         }
 
