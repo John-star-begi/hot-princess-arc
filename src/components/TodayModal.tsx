@@ -8,7 +8,7 @@ export default function TodayModal({ onClose }: { onClose: () => void }) {
   if (loading)
     return (
       <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-md flex items-center justify-center">
-        <div className="text-base text-rose-800">Loading your plan…</div>
+        <div className="text-base">Loading your plan…</div>
       </div>
     );
   if (error)
@@ -20,82 +20,93 @@ export default function TodayModal({ onClose }: { onClose: () => void }) {
   if (!data)
     return (
       <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-md flex items-center justify-center">
-        <div className="text-rose-700">No plan found</div>
+        <div>No plan found</div>
       </div>
     );
 
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[3px] flex items-center justify-center"
+        className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        {/* Outer shell */}
+        {/* Main Modal Container */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 40 }}
+          initial={{ opacity: 0, scale: 0.95, y: 30 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 40 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
-          className="relative w-full max-w-md mx-auto rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#FFF9F5] to-[#FFE9E3] shadow-[0_8px_20px_rgba(245,175,160,0.25)] border border-[#FFD7C8]/60 overflow-hidden sm:h-[90vh] flex flex-col"
+          exit={{ opacity: 0, scale: 0.95, y: 30 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="relative w-full sm:max-w-md mx-auto max-h-[90vh] overflow-y-auto scrollbar-hide
+                     rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#FFF9F5] to-[#FFE9E3]
+                     shadow-[0_8px_20px_rgba(245,175,160,0.25)] border border-[#FFE1DA]
+                     p-6 sm:p-8 text-gray-800/90 font-[Poppins]"
         >
           {/* Close Button */}
           <button
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-5 top-4 w-8 h-8 flex items-center justify-center rounded-full bg-[#FFE6E2] text-[#B35E6A] text-lg font-light shadow-[0_0_6px_rgba(255,200,180,0.25)] hover:shadow-[0_0_8px_rgba(255,200,180,0.5)] active:scale-95 transition-all duration-200"
+            className="absolute right-5 top-5 w-8 h-8 rounded-full bg-[#FFE6E2]
+                       flex items-center justify-center text-[#B35E6A] text-xl
+                       shadow-sm hover:shadow-[0_0_6px_rgba(255,200,180,0.5)]
+                       transition-transform duration-200 active:scale-95"
           >
             ×
           </button>
 
-          {/* Scrollable Content */}
-          <div className="px-6 sm:px-8 py-8 overflow-y-auto scrollbar-thin scrollbar-thumb-rose-100/50 scrollbar-track-transparent">
-            {/* Hormonal Snapshot Tile */}
-            <div className="bg-[#FFE1DA] border border-[#FFD7C8] rounded-xl py-3 px-4 mb-5 shadow-[0_2px_6px_rgba(250,200,180,0.15)]">
-              <h4 className="text-sm font-semibold text-rose-700 uppercase tracking-wide mb-1">
-                Hormonal Snapshot
-              </h4>
-              <p className="text-[14px] text-gray-700/80 leading-relaxed">
-                🌸 {data.phase.charAt(0).toUpperCase() + data.phase.slice(1)} —{" "}
-                {data.overview}
-              </p>
+          {/* Hormonal Snapshot */}
+          <div className="mb-5 rounded-xl bg-[#FFE1DA] border border-[#FFD7C8] py-3 px-4">
+            <div className="text-sm font-semibold text-rose-700 uppercase tracking-wide mb-1">
+              Hormonal Snapshot
             </div>
+            <div className="text-sm text-gray-700/80">
+              🌸 {data.phase.charAt(0).toUpperCase() + data.phase.slice(1)} phase — {data.overview}
+            </div>
+          </div>
 
+          {/* Content */}
+          <div className="space-y-6 pb-4">
             {/* Meals Section */}
-            <section className="mb-6">
-              <h3 className="font-playfair text-lg font-semibold text-rose-900 mb-3">
+            <section>
+              <h3 className="text-lg font-[Playfair_Display] font-semibold text-rose-900 mb-3">
                 🍽 Meals
               </h3>
-              <div className="space-y-3">
+              <div className="grid gap-3">
                 {data.meals.map((m) => (
-                  <div
+                  <motion.div
+                    whileTap={{ scale: 0.98 }}
                     key={m.title + m.time}
-                    className="rounded-lg py-4 px-5 bg-[#FFF3F0] border border-[#FFD7C8] shadow-[0_2px_6px_rgba(250,200,180,0.15)] hover:shadow-md hover:-translate-y-[1px] hover:bg-[#FFECE6] transition-all duration-200"
+                    className="rounded-md bg-[#FFF3F0] border border-[#FFD7C8]
+                               shadow-[0_2px_6px_rgba(250,200,180,0.15)] 
+                               p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] hover:bg-[#FFECE6]"
                   >
                     <div className="text-[15px] font-medium text-rose-800">
                       {m.time} — {m.title}
                     </div>
-                    {m.notes ? (
+                    {m.notes && (
                       <div className="text-[14px] text-gray-700/80 mt-1 italic leading-relaxed">
                         {m.notes}
                       </div>
-                    ) : null}
-                  </div>
+                    )}
+                  </motion.div>
                 ))}
               </div>
             </section>
 
             {/* Movement Section */}
-            <section className="mb-6">
-              <h3 className="font-playfair text-lg font-semibold text-rose-900 mb-3">
+            <section>
+              <h3 className="text-lg font-[Playfair_Display] font-semibold text-rose-900 mb-3">
                 💪 Movement
               </h3>
-              <div className="space-y-3">
+              <div className="grid gap-3">
                 {data.workouts.map((w, idx) => (
-                  <div
+                  <motion.div
+                    whileTap={{ scale: 0.98 }}
                     key={idx}
-                    className="rounded-lg py-4 px-5 bg-[#FFF3F0] border border-[#FFD7C8] shadow-[0_2px_6px_rgba(250,200,180,0.15)] hover:shadow-md hover:-translate-y-[1px] hover:bg-[#FFECE6] transition-all duration-200"
+                    className="rounded-md bg-[#FFF3F0] border border-[#FFD7C8]
+                               shadow-[0_2px_6px_rgba(250,200,180,0.15)]
+                               p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] hover:bg-[#FFECE6]"
                   >
                     <div className="text-[15px] font-medium text-rose-800">
                       {w.focus} • {w.intensity}
@@ -105,28 +116,35 @@ export default function TodayModal({ onClose }: { onClose: () => void }) {
                         <li key={e}>{e}</li>
                       ))}
                     </ul>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </section>
 
             {/* Supplements Section */}
             <section>
-              <h3 className="font-playfair text-lg font-semibold text-rose-900 mb-3">
+              <h3 className="text-lg font-[Playfair_Display] font-semibold text-rose-900 mb-3">
                 💊 Supplements
               </h3>
               <div className="flex flex-wrap gap-2">
                 {data.supplements.map((s) => (
-                  <span
+                  <motion.span
+                    whileTap={{ scale: 0.95 }}
                     key={s}
-                    className="px-3 py-1 rounded-full bg-[#FFF3F0] border border-[#FFD7C8] text-[14px] text-gray-800/85 shadow-sm hover:bg-[#FFECE6] transition-colors duration-200"
+                    className="px-3 py-1.5 rounded-full bg-[#FFF3F0] border border-[#FFD7C8]
+                               text-[14px] text-gray-800/80 shadow-sm hover:bg-[#FFECE6]
+                               transition-all duration-200"
                   >
                     {s}
-                  </span>
+                  </motion.span>
                 ))}
               </div>
             </section>
           </div>
+
+          {/* Fade shadows for scrollable content */}
+          <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-[#FFF9F5] to-transparent pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#FFE9E3] to-transparent pointer-events-none"></div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
