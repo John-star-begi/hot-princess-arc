@@ -21,7 +21,6 @@ import { motion } from 'framer-motion';
 type PhaseKey = 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
 type ViewKey = 'energy_mood' | 'temperature' | 'sleep' | 'digestion' | 'phase_trends';
 type CycleScope = 'current' | 'all';
-
 type Settings = { start_date: string; cycle_length: number };
 
 type JournalRow = {
@@ -55,6 +54,12 @@ const COLORS = {
   postMeal: '#A2D7D1',
 };
 
+// ✅ Local timezone-safe date parser
+function parseDateOnly(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function phaseBands(cycleLength: number) {
   const bands: { phase: PhaseKey; start: number; end: number }[] = [];
   let cur = phaseForDay(1, cycleLength) as PhaseKey;
@@ -77,7 +82,6 @@ const postMealScore = (p: JournalRow['post_meal']) =>
   p === 'sleepy' ? 1 : p === 'stable' ? 2 : p === 'energized' ? 3 : 0;
 
 /* ---------- Component ---------- */
-
 export function Charts() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [rows, setRows] = useState<JournalRow[]>([]);
@@ -101,7 +105,10 @@ export function Charts() {
 
       const since = new Date();
       since.setDate(since.getDate() - 365);
-      const sinceStr = since.toISOString().slice(0, 10);
+      // ✅ Local-safe format
+      const sinceStr = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, '0')}-${String(
+        since.getDate()
+      ).padStart(2, '0')}`;
 
       const { data: j } = await supabase
         .from('journals')
@@ -123,9 +130,9 @@ export function Charts() {
   if (rows.length === 0) return <p className="text-gray-600">No journal data yet.</p>;
 
   /* ---------- Data Prep ---------- */
-  const startD = new Date(settings.start_date);
+  const startD = parseDateOnly(settings.start_date); // ✅ use local-safe parser
   const allPoints = rows.map((r) => {
-    const d = new Date(r.date);
+    const d = parseDateOnly(r.date); // ✅ local date
     const cd = cycleDay(d, startD, settings.cycle_length);
     const phase = (r.phase ?? (phaseForDay(cd, settings.cycle_length) as PhaseKey)) as PhaseKey;
     return { ...r, cycleDay: cd, phase };
@@ -134,7 +141,6 @@ export function Charts() {
   const maxDay = Math.max(...allPoints.map((r) => r.cycleDay));
   const cyclesCount = Math.ceil(maxDay / settings.cycle_length);
 
-  // Filter to only current cycle if needed
   const filteredPoints =
     scope === 'current'
       ? allPoints.filter((r) => r.cycleDay > (cyclesCount - 1) * settings.cycle_length)
@@ -219,12 +225,14 @@ export function Charts() {
       break;
     case 'digestion':
       chartContent = (
-        <BarChart data={filteredPoints.map((r) => ({
-          cycleDay: r.cycleDay,
-          appetiteScore: appetiteScore(r.appetite),
-          bloatingScore: bloatingScore(r.bloating2),
-          postMealScore: postMealScore(r.post_meal),
-        }))}>
+        <BarChart
+          data={filteredPoints.map((r) => ({
+            cycleDay: r.cycleDay,
+            appetiteScore: appetiteScore(r.appetite),
+            bloatingScore: bloatingScore(r.bloating2),
+            postMealScore: postMealScore(r.post_meal),
+          }))}
+        >
           <CartesianGrid vertical={false} stroke="rgba(125,85,80,0.08)" />
           <XAxis dataKey="cycleDay" domain={[1, settings.cycle_length]} />
           <YAxis domain={[0, 3]} />
@@ -242,10 +250,8 @@ export function Charts() {
       chartContent = <div />;
   }
 
-  /* ---------- Render ---------- */
   return (
     <div className="w-full">
-      {/* Top toggles */}
       <div className="flex flex-wrap gap-2 mb-3">
         {(['energy_mood', 'temperature', 'sleep', 'digestion', 'phase_trends'] as ViewKey[]).map((k) => (
           <button
@@ -258,7 +264,6 @@ export function Charts() {
             {k.replace('_', ' ')}
           </button>
         ))}
-        {/* Cycle scope toggle */}
         <button
           onClick={() => setScope(scope === 'current' ? 'all' : 'current')}
           className="ml-auto px-3 py-1.5 rounded-full text-sm bg-[#FFEAE3] text-rose-900 shadow-sm hover:brightness-105"
@@ -267,7 +272,6 @@ export function Charts() {
         </button>
       </div>
 
-      {/* Chart */}
       <motion.div
         key={`${view}-${scope}`}
         initial={{ opacity: 0 }}
