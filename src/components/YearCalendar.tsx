@@ -1,6 +1,18 @@
 'use client';
 import { cycleDay, phaseForDay, phasePalette } from '@/lib/phase';
 
+// Local date helpers to avoid UTC shifting
+function parseDateOnly(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+function formatDateOnly(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export default function YearCalendar({
   startDate,
   cycleLength,
@@ -8,7 +20,7 @@ export default function YearCalendar({
   startDate: string;
   cycleLength: number;
 }) {
-  const startD = new Date(startDate);
+  const startD = parseDateOnly(startDate);
   const today = new Date();
   const year = today.getFullYear();
   const months = Array.from({ length: 12 }, (_, i) => i);
@@ -58,7 +70,7 @@ export default function YearCalendar({
                 return (
                   <a
                     key={i}
-                    href={`/journal/${d.toISOString().slice(0, 10)}`}
+                    href={`/journal/${formatDateOnly(d)}`}
                     className={`relative flex items-center justify-center aspect-square rounded-md text-[10px] bg-white ${
                       isToday ? 'ring-1 ring-pink-400' : 'ring-1 ring-gray-100'
                     }`}
