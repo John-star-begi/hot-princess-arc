@@ -10,6 +10,16 @@ export default function TodayModal({ onClose }: { onClose: () => void }) {
   const [canScroll, setCanScroll] = useState(false);
   const [atBottom, setAtBottom] = useState(false);
 
+  // ✅ Lock background scroll when modal is open
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, []);
+
+  // ✅ detect scrollable height
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -44,28 +54,29 @@ export default function TodayModal({ onClose }: { onClose: () => void }) {
 
   return (
     <AnimatePresence>
+      {/* ✅ Outer container locks viewport */}
       <motion.div
         className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        {/* Main Modal Container */}
+        {/* ✅ Scrollable modal (centered with margin instead of flex stretch) */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 30 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 30 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className="relative w-full sm:max-w-md mx-auto max-h-[90vh]
+          className="relative w-full sm:max-w-md mx-auto my-8
                      rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#FFF9F5] to-[#FFE9E3]
                      shadow-[0_8px_20px_rgba(245,175,160,0.25)] border border-[#FFE1DA]
-                     text-gray-800/90 font-[Poppins]"
+                     text-gray-800/90 font-[Poppins] max-h-[90vh]"
         >
-          {/* Scrollable area */}
+          {/* ✅ Internal scroll container */}
           <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className="overflow-y-auto scrollbar-hide p-6 sm:p-8 relative"
+            className="overflow-y-auto scrollbar-hide p-6 sm:p-8 relative h-full"
           >
             {/* Close Button */}
             <button
