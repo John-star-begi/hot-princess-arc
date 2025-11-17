@@ -1,40 +1,66 @@
-'use client'
-import { useEffect, useState } from 'react'
+"use client";
+
+import { useEffect, useState } from "react";
+
+export interface TodayPlanMeal {
+  time: string; // "breakfast" | "lunch" | "dinner" | "snack"
+  title: string;
+  notes?: string;
+}
+
+export interface TodayPlanWorkout {
+  focus: string;
+  intensity: string;
+  examples: string[];
+}
+
+export interface MealOption {
+  id: string;
+  time: "breakfast" | "lunch" | "dinner" | "snack";
+  title: string;
+  notes?: string | null;
+}
 
 export interface TodayPlan {
-  phase: string
-  overview: string
+  phase: string;
+  overview: string;
   macros: {
-    protein_g: number
-    sugar_g: number
-    starches_g: number
-    fat_g: number
-  }
-  meals: { time: string; title: string; notes?: string }[]
-  workouts: { focus: string; intensity: string; examples: string[] }[]
-  supplements: string[]
+    protein_g: number;
+    sugar_g: number;
+    starches_g: number;
+    fat_g: number;
+  };
+  meals: TodayPlanMeal[];
+  workouts: TodayPlanWorkout[];
+  supplements: string[];
+  options?: {
+    breakfast: MealOption[];
+    lunch: MealOption[];
+    dinner: MealOption[];
+    snack: MealOption[];
+  };
 }
 
 export function useTodayPlan() {
-  const [data, setData] = useState<TodayPlan | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [data, setData] = useState<TodayPlan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/today')
-        if (!res.ok) throw new Error('Failed to fetch')
-        const json = await res.json()
-        setData(json)
+        const res = await fetch("/api/today");
+        if (!res.ok) throw new Error("Failed to fetch");
+        const json = await res.json();
+        setData(json);
       } catch (err: any) {
-        setError(err.message)
+        setError(err.message);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-    load()
-  }, [])
+    load();
+  }, []);
 
-  return { data, loading, error }
+  return { data, loading, error };
 }
