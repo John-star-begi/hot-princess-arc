@@ -1,6 +1,67 @@
 "use client";
+
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTodayPlan } from "@/hooks/useTodayPlan";
+import { useTodayPlan, TodayPlanMeal, MealOption } from "@/hooks/useTodayPlan";
+
+interface MealCardProps {
+  baseMeal: TodayPlanMeal;
+  options?: MealOption[];
+}
+
+function MealCard({ baseMeal, options }: MealCardProps) {
+  const [index, setIndex] = useState(0);
+
+  const safeOptions = options || [];
+  const hasOptions = safeOptions.length > 0;
+
+  const current = hasOptions ? safeOptions[index] : null;
+
+  const title = current?.title ?? baseMeal.title;
+  const notes = current?.notes ?? baseMeal.notes;
+
+  function handleSwipe(_: any, info: { offset: { x: number } }) {
+    if (!hasOptions || safeOptions.length < 2) return;
+
+    const threshold = 40;
+
+    if (info.offset.x < -threshold) {
+      setIndex((prev) => (prev + 1) % safeOptions.length);
+    } else if (info.offset.x > threshold) {
+      setIndex((prev) => (prev - 1 + safeOptions.length) % safeOptions.length);
+    }
+  }
+
+  return (
+    <motion.div
+      whileTap={{ scale: 0.98 }}
+      className="rounded-md bg-[#FFF3F0] border border-[#FFD7C8]
+                 shadow-[0_2px_6px_rgba(250,200,180,0.15)] 
+                 p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] hover:bg-[#FFECE6]"
+    >
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        onDragEnd={handleSwipe}
+        className="cursor-grab active:cursor-grabbing"
+      >
+        <div className="text-[15px] font-medium text-rose-800">
+          {baseMeal.time} — {title}
+        </div>
+        {notes && (
+          <div className="text-[14px] text-gray-700/80 mt-1 italic leading-relaxed">
+            {notes}
+          </div>
+        )}
+        {hasOptions && safeOptions.length > 1 && (
+          <div className="mt-1 text-[12px] text-gray-500">
+            swipe left or right for another option
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
 
 export default function TodayModal({ onClose }: { onClose: () => void }) {
   const { data, loading, error } = useTodayPlan();
@@ -23,6 +84,13 @@ export default function TodayModal({ onClose }: { onClose: () => void }) {
         <div>No plan found</div>
       </div>
     );
+
+  const options = data.options || {
+    breakfast: [],
+    lunch: [],
+    dinner: [],
+    snack: [],
+  };
 
   return (
     <AnimatePresence>
@@ -61,7 +129,9 @@ export default function TodayModal({ onClose }: { onClose: () => void }) {
               Hormonal Snapshot
             </div>
             <div className="text-sm text-gray-700/80">
-              🌸 {data.phase.charAt(0).toUpperCase() + data.phase.slice(1)} phase — {data.overview}
+              🌸{" "}
+              {data.phase.charAt(0).toUpperCase() + data.phase.slice(1)} phase —{" "}
+              {data.overview}
             </div>
           </div>
 
@@ -73,24 +143,28 @@ export default function TodayModal({ onClose }: { onClose: () => void }) {
                 🍽 Meals
               </h3>
               <div className="grid gap-3">
-                {data.meals.map((m) => (
-                  <motion.div
-                    whileTap={{ scale: 0.98 }}
-                    key={m.title + m.time}
-                    className="rounded-md bg-[#FFF3F0] border border-[#FFD7C8]
-                               shadow-[0_2px_6px_rgba(250,200,180,0.15)] 
-                               p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] hover:bg-[#FFECE6]"
-                  >
-                    <div className="text-[15px] font-medium text-rose-800">
-                      {m.time} — {m.title}
-                    </div>
-                    {m.notes && (
-                      <div className="text-[14px] text-gray-700/80 mt-1 italic leading-relaxed">
-                        {m.notes}
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
+                {data.meals.map((meal, index) => {
+                  const timeKey = meal.time.toLowerCase(); // breakfast, lunch, dinner, snack
+                  let mealOptions: MealOption[] = [];
+
+                  if (timeKey === "breakfast") {
+                    mealOptions = options.breakfast || [];
+                  } else if (timeKey === "lunch") {
+                    mealOptions = options.lunch || [];
+                  } else if (timeKey === "dinner") {
+                    mealOptions = options.dinner || [];
+                  } else if (timeKey === "snack") {
+                    mealOptions = options.snack || [];
+                  }
+
+                  return (
+                    <MealCard
+                      key={meal.title + meal.time + index}
+                      baseMeal={meal}
+                      options={mealOptions}
+                    />
+                  );
+                })}
               </div>
             </section>
 
