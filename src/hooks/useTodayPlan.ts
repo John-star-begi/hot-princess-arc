@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 export interface TodayPlanMeal {
-  time: string; // "breakfast" | "lunch" | "dinner" | "snack"
+  time: string;
   title: string;
   notes?: string;
 }
@@ -49,7 +49,7 @@ export function useTodayPlan() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/today");
+        const res = await fetch("/api/today", { cache: "no-store" });
         if (!res.ok) throw new Error("Failed to fetch");
         const json = await res.json();
         setData(json);
