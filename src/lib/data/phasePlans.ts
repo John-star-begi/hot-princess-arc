@@ -1,4 +1,4 @@
-
+console.log("phasePlans.ts LOADED");
 import { createServerSupabase } from "@/lib/supabaseServer";
 
 export type PhaseSlug = "menstrual" | "follicular" | "ovulation" | "luteal";
