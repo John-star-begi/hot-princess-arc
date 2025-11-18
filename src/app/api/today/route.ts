@@ -5,28 +5,53 @@ import { getTodayPlan } from "@/lib/data/phasePlans";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const supabase = createServerSupabase();
+  console.log("🔥 /api/today HIT");
+
+  let supabase;
+  try {
+    supabase = createServerSupabase();
+    console.log("✔ supabase created");
+  } catch (err) {
+    console.log("❌ Supabase init error:", err);
+    return NextResponse.json({ error: "Supabase init failed" }, { status: 500 });
+  }
 
   const {
     data: { user },
-    error,
+    error: userErr,
   } = await supabase.auth.getUser();
 
-  if (error || !user) {
+  console.log("user:", user, "userErr:", userErr);
+
+  if (userErr || !user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  // Get the existing plan for today
-  const plan = await getTodayPlan(user.id);
+  console.log("➡️ calling getTodayPlan");
+  let plan;
+
+  try {
+    plan = await getTodayPlan(user.id);
+    console.log("✔ plan from getTodayPlan:", plan);
+  } catch (err) {
+    console.log("❌ getTodayPlan crashed:", err);
+    return NextResponse.json({ error: "getTodayPlan crashed" }, { status: 500 });
+  }
+
   if (!plan) {
+    console.log("❌ No plan returned");
     return NextResponse.json({ error: "No plan found" }, { status: 404 });
   }
 
-  // Load all meal options for this phase from public.meal_options
+  console.log("➡️ Loading meal_options from Supabase...");
+
   const { data: mealOptions, error: mealErr } = await supabase
     .from("meal_options")
     .select("id, phase_slug, time, title, notes")
     .eq("phase_slug", plan.phase);
+
+  console.log("mealOptions:", mealOptions);
+  console.log("mealErr:", mealErr);
 
   if (mealErr) {
     return NextResponse.json(
@@ -35,17 +60,11 @@ export async function GET() {
     );
   }
 
-  // Group options by meal_time enum
-  const grouped: {
-    breakfast: any[];
-    lunch: any[];
-    dinner: any[];
-    snack: any[];
-  } = {
-    breakfast: [],
-    lunch: [],
-    dinner: [],
-    snack: [],
+  const grouped = {
+    breakfast: [] as any[],
+    lunch: [] as any[],
+    dinner: [] as any[],
+    snack: [] as any[],
   };
 
   (mealOptions || []).forEach((m) => {
@@ -55,7 +74,10 @@ export async function GET() {
     else if (m.time === "snack") grouped.snack.push(m);
   });
 
-  // Return the original plan plus the grouped options
+  console.log("✔ grouped meal options:", grouped);
+
+  console.log("➡️ Returning final JSON");
+
   return NextResponse.json({
     ...plan,
     options: grouped,
