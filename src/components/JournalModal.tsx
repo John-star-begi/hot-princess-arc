@@ -1,12 +1,13 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import jsPDF from 'jspdf';
 import { getUser, loadUserSettings, loadJournal, saveJournal, JournalForm } from '@/lib/journal';
 import { cycleDay, phaseForDay } from '@/lib/phase';
 
 type PhaseSlug = 'menstrual' | 'follicular' | 'ovulation' | 'luteal' | 'unknown';
 
-/* ---------- Timezone-safe date helpers ---------- */
+/* ---------- Timezone safe date helpers ---------- */
 function formatDateOnly(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -19,9 +20,151 @@ function parseDateOnly(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
+/* ---------- Helper: turn journal form into text ---------- */
+function buildJournalText(form: JournalForm, phase: PhaseSlug, date: string): string {
+  const lines: string[] = [];
+
+  lines.push(`date: ${date}`);
+  lines.push(`cycle phase: ${phase}`);
+  lines.push('');
+
+  const yesNo = (v: boolean | null | undefined) =>
+    v === true ? 'yes' : v === false ? 'no' : 'not recorded';
+
+  const push = (label: string, value: any) => {
+    if (value === undefined || value === null || value === '') return;
+    lines.push(`${label}: ${value}`);
+  };
+
+  // warmth and temperature
+  lines.push('warmth and temperature');
+  push('warm after eating', form.warm_after_eating);
+  push('hands and feet warmth (1 to 5)', form.hands_feet_warmth);
+  push('morning temp °C', form.temp_morning_c);
+  push('evening temp °C', form.temp_evening_c);
+  lines.push('');
+
+  // energy and mood
+  lines.push('energy and mood');
+  push('energy level (1 to 5)', form.energy_level);
+  push('mood stability (1 to 5)', form.mood_stability);
+  push('mid afternoon slump', yesNo(form.mid_afternoon_slump));
+  push('anxiety or irritability', form.anxiety);
+  lines.push('');
+
+  // digestion and appetite
+  lines.push('digestion and appetite');
+  push('appetite', form.appetite);
+  push('bloating or gas', form.bloating2);
+  push('after meals you felt', form.post_meal);
+  push('bowel movement', form.bowel);
+  lines.push('');
+
+  // hormonal signals
+  lines.push('hormonal signals');
+  push('breast tenderness', form.breast_tenderness);
+  push('discharge', form.discharge);
+  push('libido', form.libido);
+  lines.push('');
+
+  // hair skin nails
+  lines.push('hair skin nails');
+  push('hair shedding', form.hair_shedding);
+  push('skin', form.skin);
+  push('nails', form.nails);
+  lines.push('');
+
+  // training and recovery
+  lines.push('training and recovery');
+  push('activity type', form.activity);
+  push('effort (1 to 5)', form.effort);
+  push('felt energized after', yesNo(form.felt_energized));
+  lines.push('');
+
+  // electrolytes and hydration
+  lines.push('electrolytes and hydration');
+  push('salt craving', form.salt_craving);
+  push('oj with salt and honey', yesNo(form.oj_salt_honey));
+  push('cramps or twitches', yesNo(form.cramps_twitches));
+  lines.push('');
+
+  // sleep
+  lines.push('sleep');
+  push('bedtime', form.bedtime);
+  push('woke', form.woke);
+  push('fell asleep easily', yesNo(form.fell_asleep_easily));
+  if (form.night_wakings !== null && form.night_wakings !== undefined) {
+    push('night wakings', form.night_wakings);
+  }
+  lines.push('');
+
+  // one line reflection
+  lines.push('one line reflection');
+  push('reflection', form.one_line_reflection);
+  lines.push('');
+
+  // cycle specific
+  if (phase === 'menstrual') {
+    lines.push('menstrual details');
+    push('flow', form.m_flow);
+    push('clotting', form.m_clotting);
+    push('cramps or pain (1 to 5)', form.m_cramps_pain);
+    push('energy recovery by day 3 to 4', yesNo(form.m_energy_recovery_by_day3));
+    push('mood calmness (1 to 5)', form.m_mood_calmness);
+    push('warmth returning since period start', yesNo(form.m_warmth_returning));
+    push('digestion improving versus pre period', yesNo(form.m_digestion_improving));
+    lines.push('');
+  }
+
+  if (phase === 'follicular') {
+    lines.push('follicular details');
+    push('energy rising', yesNo(form.f_energy_rising));
+    push('motivation and focus better than during period', yesNo(form.f_motivation_focus_better));
+    push('water retention or puffiness', yesNo(form.f_water_retention));
+    push('skin clarity', form.f_skin_clarity);
+    push('anxiety or restlessness', yesNo(form.f_anxiety_or_restlessness));
+    push('basal temperature stable', yesNo(form.f_basal_temp_stable));
+    lines.push('');
+  }
+
+  if (phase === 'ovulation') {
+    lines.push('ovulation details');
+    push('mucus clear and stretchy', yesNo(form.o_sign_mucus_clear));
+    push('mid cycle pain', yesNo(form.o_sign_midcycle_pain));
+    push('high libido', yesNo(form.o_sign_high_libido));
+    push('breast tenderness', yesNo(form.o_sign_breast_tenderness));
+    push('ovulation felt strong', yesNo(form.o_felt_strong));
+    push('inflammation (joints bloating headache)', yesNo(form.o_inflammation));
+    push('sleep quality', form.o_sleep_quality);
+    push('appetite change', form.o_appetite_change);
+    lines.push('');
+  }
+
+  if (phase === 'luteal') {
+    lines.push('luteal details');
+    push('temperature stable', yesNo(form.l_temperature_stable));
+    push('mood stability', form.l_mood_stability);
+    push('sleep quality', form.l_sleep_quality);
+    if (form.l_cravings && form.l_cravings.length > 0) {
+      push('cravings', form.l_cravings.join(', '));
+    }
+    push('pms signs', form.l_pms_signs);
+    push('pre spotting or pink discharge', yesNo(form.l_pre_spotting));
+    push('energy (1 to 5)', form.l_energy);
+    lines.push('');
+  }
+
+  if (form.notes) {
+    lines.push('extra notes');
+    lines.push(form.notes);
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
 /* ---------- Main component ---------- */
 export default function JournalModal({ onClose }: { onClose: () => void }) {
-  // ✅ Use local date instead of UTC-based toISOString
   const today = formatDateOnly(new Date());
 
   const [form, setForm] = useState<JournalForm>({});
@@ -29,6 +172,8 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
   const [message, setMessage] = useState('');
   const [isAlreadyLogged, setIsAlreadyLogged] = useState(false);
   const [phase, setPhase] = useState<PhaseSlug>('unknown');
+  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -37,7 +182,6 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
         const settings = await loadUserSettings(user.id);
         if (settings) {
           setUserSettings(settings);
-          // ✅ Parse as local-only dates to prevent off-by-one errors
           const cd = cycleDay(
             parseDateOnly(today),
             parseDateOnly(settings.start_date),
@@ -49,7 +193,6 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
         const existing = await loadJournal(user.id, today);
         if (existing) {
           setIsAlreadyLogged(true);
-          // Seed form with existing values
           setForm({ ...existing });
         }
       } catch (err) {
@@ -162,6 +305,11 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, form]);
 
+  const journalText = useMemo(
+    () => buildJournalText(form, phase, today),
+    [form, phase, today]
+  );
+
   async function handleSave() {
     try {
       const user = await getUser();
@@ -170,6 +318,68 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
       setIsAlreadyLogged(true);
     } catch {
       setMessage('Error saving ❌');
+    }
+  }
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(journalText);
+      setMessage('Copied to clipboard ✅');
+    } catch {
+      setMessage('Could not copy ❌');
+    }
+  }
+
+  function handlePrintPdf() {
+    try {
+      const doc = new jsPDF({
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      // soft background
+      doc.setFillColor(255, 249, 243); // #FFF9F3
+      doc.rect(0, 0, 210, 297, 'F');
+
+      doc.setTextColor(90, 40, 60);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12);
+
+      const marginLeft = 15;
+      const marginTop = 20;
+      const maxWidth = 180;
+
+      const lines = doc.splitTextToSize(journalText, maxWidth);
+      doc.text(lines, marginLeft, marginTop);
+
+      doc.save(`journal-${today}.pdf`);
+      setMessage('PDF downloaded ✅');
+    } catch (err) {
+      console.error(err);
+      setMessage('Could not generate PDF ❌');
+    }
+  }
+
+  async function handleAnalyze() {
+    setAnalyzing(true);
+    setAnalysis(null);
+    setMessage('');
+    try {
+      const res = await fetch('/api/analyze-journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: today, phase, text: journalText }),
+      });
+      if (!res.ok) {
+        throw new Error('bad response');
+      }
+      const json = await res.json();
+      setAnalysis(json.analysis ?? 'No analysis returned');
+    } catch (err) {
+      console.error(err);
+      setMessage('Could not analyze today ❌');
+    } finally {
+      setAnalyzing(false);
     }
   }
 
@@ -201,7 +411,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
             </p>
           )}
 
-          {/* 1. 🔥 Warmth & Temperature */}
+          {/* 1. Warmth and temperature */}
           <Section title="Warmth and Temperature">
             <SelectRow
               label="Did you feel warm after eating"
@@ -233,7 +443,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
             />
           </Section>
 
-          {/* 2. ⚡ Energy & Mood */}
+          {/* 2. Energy and mood */}
           <Section title="Energy and Mood">
             <NumberRow label="Energy level (1 to 5)" value={form.energy_level ?? null} onChange={(n)=>setField('energy_level', n as any)} min={1} max={5} disabled={isAlreadyLogged} />
             <NumberRow label="Mood stability (1 to 5)" value={form.mood_stability ?? null} onChange={(n)=>setField('mood_stability', n as any)} min={1} max={5} disabled={isAlreadyLogged} />
@@ -242,7 +452,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
               options={[['none','None'],['mild','Mild'],['moderate','Moderate'],['high','High']]} disabled={isAlreadyLogged} />
           </Section>
 
-          {/* 3. 🍽️ Digestion & Appetite */}
+          {/* 3. Digestion and appetite */}
           <Section title="Digestion and Appetite">
             <SelectRow label="Appetite" value={form.appetite ?? null} onChange={(v)=>setField('appetite', v as any)}
               options={[['low','Low'],['normal','Normal'],['strong','Strong']]} disabled={isAlreadyLogged}/>
@@ -254,7 +464,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
               options={[['normal','Normal'],['loose','Loose'],['hard','Hard'],['greasy','Greasy']]} disabled={isAlreadyLogged}/>
           </Section>
 
-          {/* 4. 💗 Hormonal Signals */}
+          {/* 4. Hormonal signals */}
           <Section title="Hormonal Signals">
             <SelectRow label="Breast tenderness" value={form.breast_tenderness ?? null} onChange={(v)=>setField('breast_tenderness', v as any)}
               options={[['none','None'],['mild','Mild'],['noticeable','Noticeable']]} disabled={isAlreadyLogged}/>
@@ -264,7 +474,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
               options={[['low','Low'],['normal','Normal'],['high','High']]} disabled={isAlreadyLogged}/>
           </Section>
 
-          {/* 5. 🦴 Hair / Skin / Nails */}
+          {/* 5. Hair skin nails */}
           <Section title="Hair, Skin, Nails">
             <SelectRow label="Hair shedding" value={form.hair_shedding ?? null} onChange={(v)=>setField('hair_shedding', v as any)}
               options={[['none','None'],['slight','Slight'],['noticeable','Noticeable']]} disabled={isAlreadyLogged}/>
@@ -274,7 +484,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
               options={[['strong','Strong'],['peeling','Peeling'],['brittle','Brittle']]} disabled={isAlreadyLogged}/>
           </Section>
 
-          {/* 6. 💪 Training & Recovery */}
+          {/* 6. Training and recovery */}
           <Section title="Training and Recovery">
             <SelectRow label="Activity type" value={form.activity ?? null} onChange={(v)=>setField('activity', v as any)}
               options={[['rest','Rest'],['walk','Walk'],['pilates','Pilates'],['weights','Weights']]} disabled={isAlreadyLogged}/>
@@ -282,7 +492,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
             <YesNoRow label="Felt energized after" value={form.felt_energized ?? null} onChange={(b)=>setField('felt_energized', b)} disabled={isAlreadyLogged}/>
           </Section>
 
-          {/* 7. 🧂 Electrolytes & Hydration */}
+          {/* 7. Electrolytes and hydration */}
           <Section title="Electrolytes and Hydration">
             <SelectRow label="Salt craving" value={form.salt_craving ?? null} onChange={(v)=>setField('salt_craving', v as any)}
               options={[['none','None'],['mild','Mild'],['strong','Strong']]} disabled={isAlreadyLogged}/>
@@ -290,7 +500,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
             <YesNoRow label="Any cramps or twitches" value={form.cramps_twitches ?? null} onChange={(b)=>setField('cramps_twitches', b)} disabled={isAlreadyLogged}/>
           </Section>
 
-          {/* 8. 🌙 Sleep */}
+          {/* 8. Sleep */}
           <Section title="Sleep">
             <TimePairRow
               labelLeft="Bedtime"
@@ -306,7 +516,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
               options={[['0','0'],['1','1'],['2','2+']]} disabled={isAlreadyLogged}/>
           </Section>
 
-          {/* 9. ✍️ One-Line Reflection */}
+          {/* 9. One line reflection */}
           <Section title="One line reflection">
             <textarea
               className="w-full rounded-2xl bg-gradient-to-r from-[#FFF9F3] to-[#FFEAE3] p-3 text-rose-900 focus:ring-2 focus:ring-rose-200 focus:outline-none"
@@ -317,7 +527,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
             />
           </Section>
 
-          {/* 10. 🌕 Cycle-aware reflection */}
+          {/* 10. Cycle aware block */}
           {PhaseBlock}
 
           {!isAlreadyLogged && (
@@ -330,6 +540,45 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
           )}
 
           {message && <p className="text-center text-rose-700 mt-3 text-sm">{message}</p>}
+
+          {/* export and analyze area – only when already logged */}
+          {isAlreadyLogged && (
+            <div className="mt-4">
+              <p className="text-center text-rose-800 text-sm mb-2">
+                export and insights
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrintPdf}
+                  className="flex-1 rounded-full bg-white/80 border border-[#FFD7C8] text-rose-800 py-2 text-sm shadow-sm hover:bg-white transition"
+                >
+                  print pdf
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="flex-1 rounded-full bg-white/80 border border-[#FFD7C8] text-rose-800 py-2 text-sm shadow-sm hover:bg-white transition"
+                >
+                  copy to clipboard
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAnalyze}
+                  className="flex-1 rounded-full bg-gradient-to-r from-[#FFD7C8] to-[#F7A7A7] text-white py-2 text-sm shadow-[0_6px_18px_rgba(255,180,170,0.4)] hover:brightness-105 transition disabled:opacity-60"
+                  disabled={analyzing}
+                >
+                  {analyzing ? 'analyzing…' : 'analyze'}
+                </button>
+              </div>
+
+              {analysis && (
+                <div className="mt-3 rounded-2xl bg-white/70 p-3 text-xs text-rose-900 whitespace-pre-wrap">
+                  {analysis}
+                </div>
+              )}
+            </div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
@@ -501,4 +750,3 @@ function YesNoRowRow(props: {
 }) {
   return <YesNoRow {...props} />;
 }
-
