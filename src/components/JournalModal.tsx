@@ -7,7 +7,7 @@ import { cycleDay, phaseForDay } from '@/lib/phase';
 
 type PhaseSlug = 'menstrual' | 'follicular' | 'ovulation' | 'luteal' | 'unknown';
 
-/* ---------- Timezone safe date helpers ---------- */
+/* ---------- timezone safe date helpers ---------- */
 function formatDateOnly(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -20,7 +20,7 @@ function parseDateOnly(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
-/* ---------- Helper: turn journal form into text ---------- */
+/* ---------- helper: turn journal form into text ---------- */
 function buildJournalText(form: JournalForm, phase: PhaseSlug, date: string): string {
   const lines: string[] = [];
 
@@ -163,7 +163,7 @@ function buildJournalText(form: JournalForm, phase: PhaseSlug, date: string): st
   return lines.join('\n');
 }
 
-/* ---------- Main component ---------- */
+/* ---------- main component ---------- */
 export default function JournalModal({ onClose }: { onClose: () => void }) {
   const today = formatDateOnly(new Date());
 
@@ -332,25 +332,169 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
 
   function handlePrintPdf() {
     try {
+      // a4 in mm, portrait
       const doc = new jsPDF({
         unit: 'mm',
         format: 'a4',
+        orientation: 'p',
       });
 
-      // soft background
-      doc.setFillColor(255, 249, 243); // #FFF9F3
-      doc.rect(0, 0, 210, 297, 'F');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
 
-      doc.setTextColor(90, 40, 60);
+      /* ---------- background gradient ---------- */
+      const topColor = { r: 255, g: 249, b: 243 };  // #FFF9F3
+      const bottomColor = { r: 255, g: 234, b: 227 }; // #FFEAE3
+      const steps = 80;
+
+      for (let i = 0; i < steps; i++) {
+        const ratio = i / steps;
+        const r = Math.round(topColor.r + (bottomColor.r - topColor.r) * ratio);
+        const g = Math.round(topColor.g + (bottomColor.g - topColor.g) * ratio);
+        const b = Math.round(topColor.b + (bottomColor.b - topColor.b) * ratio);
+
+        doc.setFillColor(r, g, b);
+        doc.rect(
+          0,
+          (pageHeight / steps) * i,
+          pageWidth,
+          pageHeight / steps,
+          'F'
+        );
+      }
+
+      /* ---------- header ribbon ---------- */
+      doc.setFillColor(255, 215, 200); // soft rose strip
+      doc.rect(0, 0, pageWidth, 18, 'F');
+
+      /* ---------- typography ---------- */
+      const headingColor = { r: 159, g: 59, b: 80 }; // #9F3B50
+      const textColor = { r: 90, g: 58, b: 58 };     // #5A3A3A;
+      const accentColor = { r: 227, g: 140, b: 145 }; // subtle accent
+
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
 
-      const marginLeft = 15;
-      const marginTop = 20;
-      const maxWidth = 180;
+      // title
+      doc.setTextColor(headingColor.r, headingColor.g, headingColor.b);
+      doc.setFontSize(18);
+      doc.text('hot princess arc · daily metabolic journal', 10, 12);
 
-      const lines = doc.splitTextToSize(journalText, maxWidth);
-      doc.text(lines, marginLeft, marginTop);
+      // date and phase
+      doc.setFontSize(11);
+      doc.setTextColor(textColor.r, textColor.g, textColor.b);
+      doc.text(`date: ${today}`, 15, 28);
+      doc.text(`phase: ${phase}`, 15, 34);
+
+      // small underline accent
+      doc.setDrawColor(accentColor.r, accentColor.g, accentColor.b);
+      doc.setLineWidth(0.5);
+      doc.line(15, 38, pageWidth - 15, 38);
+
+      /* ---------- watermark footer ---------- */
+      doc.setFontSize(10);
+      doc.setTextColor(210, 170, 175);
+      doc.text('hot princess arc', pageWidth - 45, pageHeight - 8);
+
+      /* ---------- content layout ---------- */
+      let y = 50;
+
+      const addSection = (title: string, body: string[]) => {
+        if (y > pageHeight - 30) {
+          doc.addPage();
+          // redraw footer and background tone on new page
+          const h = doc.internal.pageSize.getHeight();
+          const w = doc.internal.pageSize.getWidth();
+
+          // soft background (solid on new pages)
+          doc.setFillColor(255, 246, 241);
+          doc.rect(0, 0, w, h, 'F');
+
+          // footer
+          doc.setFontSize(10);
+          doc.setTextColor(210, 170, 175);
+          doc.text('hot princess arc', w - 45, h - 8);
+
+          y = 20;
+        }
+
+        doc.setFontSize(13);
+        doc.setTextColor(headingColor.r, headingColor.g, headingColor.b);
+        doc.text(title, 15, y);
+        y += 6;
+
+        doc.setFontSize(11);
+        doc.setTextColor(textColor.r, textColor.g, textColor.b);
+
+        body.forEach((line) => {
+          const wrapped = doc.splitTextToSize(line, pageWidth - 30);
+          doc.text(wrapped, 15, y);
+          y += wrapped.length * 5;
+          if (y > pageHeight - 30) {
+            doc.addPage();
+            const h = doc.internal.pageSize.getHeight();
+            const w = doc.internal.pageSize.getWidth();
+            doc.setFillColor(255, 246, 241);
+            doc.rect(0, 0, w, h, 'F');
+
+            doc.setFontSize(10);
+            doc.setTextColor(210, 170, 175);
+            doc.text('hot princess arc', w - 45, h - 8);
+
+            y = 20;
+          }
+        });
+
+        y += 4;
+      };
+
+      /* ---------- parse journal text into sections ---------- */
+      const rawLines = journalText.split('\n').map((l) => l.trim());
+
+      const headingLabels = [
+        'warmth and temperature',
+        'energy and mood',
+        'digestion and appetite',
+        'hormonal signals',
+        'hair skin nails',
+        'training and recovery',
+        'electrolytes and hydration',
+        'sleep',
+        'one line reflection',
+        'menstrual details',
+        'follicular details',
+        'ovulation details',
+        'luteal details',
+        'extra notes',
+      ];
+
+      const headingSet = new Set(headingLabels);
+
+      let currentTitle: string | null = null;
+      let buffer: string[] = [];
+
+      const flush = () => {
+        if (currentTitle && buffer.length > 0) {
+          addSection(currentTitle, buffer);
+        }
+        buffer = [];
+      };
+
+      rawLines.forEach((line) => {
+        if (!line) return;
+
+        // ignore date and phase lines
+        if (line.toLowerCase().startsWith('date:')) return;
+        if (line.toLowerCase().startsWith('cycle phase:')) return;
+
+        if (headingSet.has(line.toLowerCase())) {
+          flush();
+          currentTitle = line;
+        } else {
+          buffer.push(line);
+        }
+      });
+
+      flush();
 
       doc.save(`journal-${today}.pdf`);
       setMessage('PDF downloaded ✅');
@@ -585,7 +729,7 @@ export default function JournalModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-/* ---------- Small UI helpers ---------- */
+/* ---------- small ui helpers ---------- */
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
